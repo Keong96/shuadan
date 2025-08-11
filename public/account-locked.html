@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Summit Asset Capital</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
+  <script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="7cdc0b2e-0a17-4392-9434-3e2442f8077b";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      padding-top: 70px;
+      display: flex;
+      flex-direction: column;
+      background-color: #1e1e2f;
+      color: #f0f0f0;
+    }
+
+    .form-section {
+      display: none;
+    }
+
+    .form-section.active {
+      display: block;
+    }
+
+    .navbar {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      background-color: #27293d;
+    }
+
+    body > .container {
+      flex: 1;
+    }
+
+    footer {
+      background-color: #27293d;
+      padding: 20px 0;
+    }
+
+    .btn-primary {
+      background-color: #4e54c8;
+      border-color: #4e54c8;
+    }
+
+    .btn-primary:hover {
+      background-color: #3b40a4;
+      border-color: #3b40a4;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation bar -->
+  <nav class="navbar navbar-expand-lg fixed-top">
+    <div class="container">
+      <a class="navbar-brand text-white" href="index.html">Summit Asset Capital</a>
+    </div>
+  </nav>
+
+  <!-- Content Section -->
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="alert alert-danger text-center shadow-lg p-4 rounded">
+          <h4 class="alert-heading mb-3">Account Locked</h4>
+          <p class="mb-0">
+            Your account has been temporarily locked.<br>
+            Please contact admin to unlock your account.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="text-center mt-5">
+    <div class="container">
+      <p>&copy; 2025 Summit Asset Capital. All rights reserved.</p>
+    </div>
+  </footer>
+  <script>
+    localStorage.removeItem("token");
+    window.stop();
+  </script>
+</body>
+</html>
