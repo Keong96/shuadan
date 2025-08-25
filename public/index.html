@@ -269,7 +269,7 @@
   .then(res => {
     if (res.data.success && res.data.company_name) {
       document.title = res.data.company_name
-      document.querySelector('footer p'.innerHTML = `&copy; 2025 ${res.data.company_name}. All rights reserved.`);
+      document.querySelector('footer span').textContent = res.data.company_name
     }
   })
   .catch(err => {
