@@ -29,7 +29,6 @@
   "register.have_account": "Already have an account?",
   "register.login_now": "Login Now",
 
-  "footer.company": "Summit Asset Capital",
   "footer.rights": "All rights reserved",
 
   "nav.home": "Home",
@@ -162,8 +161,6 @@
   "modal.team.sales": "Sales (USDT)",
   "modal.team.commission": "Commission (USDT)",
   "modal.team.total": "Total",
-  "modal.team.totalSales": "Total Sales",
-  "modal.team.totalCommission": "Total Commission",
 
   "modal.security.title": "Security Center",
   "modal.security.old_password": "Old Password",

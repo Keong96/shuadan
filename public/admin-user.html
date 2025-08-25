@@ -129,8 +129,7 @@
       <nav class="nav flex-column px-3 pt-4">
         <a class="nav-link" href="admin-dashboard.html"><i class="bi bi-speedometer2 me-2"></i>控制面板</a>
         <a class="nav-link active" href="/admin-user.html"><i class="bi bi-box-seam me-2"></i>用户管理</a>
-        <a class="nav-link" href="/admin-task.html"><i class="bi bi-box-seam me-2"></i>任务模版</a>
-        <a class="nav-link" href="/admin-order.html"><i class="bi bi-box-seam me-2"></i>订单管理</a>
+        <a class="nav-link" href="/admin-task.html"><i class="bi bi-box-seam me-2"></i>产品管理</a>
         <a class="nav-link" href="/admin-transaction.html"><i class="bi bi-bank me-2"></i>交易明细</a>
         <a class="nav-link" href="/admin-setting.html"><i class="bi bi-receipt me-2"></i>全局设定</a>
         <a class="nav-link" href="#" onclick="Logout()"><i class="bi bi-box-arrow-right me-2"></i>登出</a>
@@ -202,6 +201,19 @@
             </div>
 
             <div class="mb-3 row">
+              <label for="editVipLevel" class="col-sm-4 col-form-label">VIP 等级</label>
+              <div class="col-sm-8">
+                <select id="editVipLevel" name="vip_level" class="form-control bg-dark text-white border-secondary">
+                  <option value="BASIC">BASIC</option>
+                  <option value="ADVANCED">ADVANCED</option>
+                  <option value="PRO">PRO</option>
+                  <option value="ELITE">ELITE</option>
+                  <option value="LEGEND">LEGEND</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mb-3 row">
               <label for="editPassword" class="col-sm-4 col-form-label">密码</label>
               <div class="col-sm-8">
                 <input id="editPassword" name="password" type="text" class="form-control bg-dark text-white border-secondary">
@@ -249,6 +261,109 @@
             <button type="button" id="editSaveBtn" class="btn btn-light text-dark" onclick="editUser()">储存</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Modal -->
+  <div class="modal fade" id="cycleOrdersModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content bg-dark text-white">
+        <div class="modal-header">
+          <h5 class="modal-title">任务设置 & 订单列表</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <h3>任务设置</h3>
+          <hr>
+          <!-- 设置表单 -->
+          <div class="mb-2 d-flex align-items-center">
+            <label class="form-label me-2 mb-0" style="width: 100px;">任务环大小</label>
+            <input type="number" id="modalCycleSize" class="form-control form-control-sm">
+          </div>
+
+          <div class="mb-2 d-flex align-items-center">
+            <label class="form-label me-2 mb-0" style="width: 100px;">卡单位置</label>
+            <input type="text" id="modalBlockers" class="form-control form-control-sm">
+          </div>
+
+          <div class="mb-3 d-flex align-items-center">
+            <label class="form-label me-2 mb-0" style="width: 100px;">佣金比例</label>
+            <input type="text" id="modalCommission" class="form-control form-control-sm">
+          </div>
+          <button class="btn btn-success btn w-100 mb-3" id="modalSaveBtn">更改</button>
+
+          <h3>订单列表</h3>
+          <hr>
+          <!-- 订单表格 -->
+          <div class="table-responsive">
+            <table class="table table-dark table-bordered table-sm table-hover align-middle">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th class="text-nowrap text-center">产品照片</th>
+                <th class="text-nowrap text-center">产品名称</th>
+                <th class="text-nowrap text-center">产品价格</th>
+                <th class="text-nowrap text-center">完成时间</th>
+                <th class="text-nowrap text-center">佣金比例</th>
+                <th class="text-nowrap text-center">佣金</th>
+                <th class="text-nowrap text-center" style="min-width:80px">操作</th>
+              </tr>
+            </thead>
+            <tbody id="modalOrdersBody">
+              <tr><td colspan="3" class="text-center">暂无订单</td></tr>
+            </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team Modal -->
+  <div class="modal fade" id="teamModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content bg-dark text-white border-secondary">
+        <div class="modal-header border-bottom border-secondary">
+          <h5 class="modal-title">团队信息 <small id="teamOwner" class="text-muted"></small></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="table-responsive">
+            <table class="table table-dark table-striped text-center mb-0">
+              <thead>
+                <tr>
+                  <th>用户名</th>
+                  <th>VIP</th>
+                  <th>佣金</th>
+                </tr>
+              </thead>
+              <tbody id="teamTableBody">
+                <tr><td colspan="3" class="text-center text-muted">等待加载</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset Cycle Modal -->
+  <div class="modal fade" id="confirmResetModal" tabindex="-1" aria-labelledby="confirmResetModalLable" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark text-white border-secondary">
+        <div class="modal-header border-bottom border-secondary">
+          <h5 class="modal-title" id="resetCycleModalLabel">重置任务</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>是否立即重置任务？<br>
+          关闭后将<strong>立刻分发佣金并创建新任务</strong>。</p>
+        </div>
+        <div class="modal-footer border-top border-secondary">
+          <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">取消</button>
+          <button type="button" id="confirmResetBtn" class="btn btn-danger">确认重置</button>
+        </div>
       </div>
     </div>
   </div>
@@ -310,35 +425,59 @@
             <td>${i + 1}</td>
             <td>${user.username}</td>
             <td>${parseFloat(user.balance).toFixed(2)}</td>
-            <td><button class="btn ${statusClass} btn-sm statusBtn" data-id="${user.id}">${statusText}</button></td>
+            <td class="text-nowrap"><button class="btn ${statusClass} btn-sm statusBtn" data-id="${user.id}">${statusText}</button></td>
             <td>${createdDate.toLocaleString('en-GB', { hour12: false, timeZone: 'Asia/Singapore' })}</td>
-            <td>
-              <button 
-                class="btn btn-sm btn-warning text-dark" 
-                data-bs-toggle="modal" 
-                data-bs-target="#editUserModal"
-                data-id="${user.id}"
-                data-username="${user.username}"
-                data-referral-code="${user.referral_code}"
-                data-balance="${user.balance}"
-                data-password="${user.password || ''}"
-                data-security-pin="${user.security_pin || ''}"
-                data-phone="${user.phone || ''}"
-                data-email="${user.email || ''}"
-                data-gender="${user.gender || ''}"
-                data-dob="${user.dob || ''}"
-              >
-                <i class="bi bi-pencil"></i>
-              </button>
-              <button 
-                class="btn btn-sm btn-danger" 
-                data-bs-toggle="modal" 
-                data-bs-target="#confirmDeleteModal" 
-                data-id="${user.id}"
-              >
-                <i class="bi bi-trash"></i>
-              </button>
-            </td>
+            <td class="text-nowrap">
+            <button 
+              class="btn btn-sm btn-warning text-dark me-1" 
+              data-bs-toggle="modal" 
+              data-bs-target="#editUserModal"
+              data-id="${user.id}"
+              data-username="${user.username}"
+              data-referral-code="${user.referral_code}"
+              data-balance="${user.balance}"
+              data-password="${user.password || ''}"
+              data-security-pin="${user.security_pin || ''}"
+              data-phone="${user.phone || ''}"
+              data-email="${user.email || ''}"
+              data-gender="${user.gender || ''}"
+              data-dob="${user.dob || ''}">
+              基本资料
+            </button>
+
+            <button 
+              class="btn btn-sm btn-info me-1" 
+              data-bs-toggle="modal" 
+              data-bs-target="#cycleOrdersModal"
+              data-id="${user.id}">
+              订单设置
+            </button>
+
+            <button 
+              class="btn btn-sm btn-secondary me-1" 
+              data-bs-toggle="modal" 
+              data-bs-target="#teamModal"
+              data-id="${user.id}"
+              data-username="${user.username}">
+              查看团队
+            </button>
+
+            <button 
+              class="btn btn-sm btn-warning" 
+              data-bs-toggle="modal" 
+              data-bs-target="#confirmResetModal" 
+              data-id="${user.id}">
+              重置任务
+            </button>
+
+            <button 
+              class="btn btn-sm btn-danger me-1" 
+              data-bs-toggle="modal" 
+              data-bs-target="#confirmDeleteModal" 
+              data-id="${user.id}">
+              删除用户
+            </button>
+          </td>
           </tr>
         `;
       }
@@ -365,13 +504,12 @@
     .catch(err => console.error('User load failed:', err));
 
     const editModal = document.getElementById('editUserModal');
-
     editModal.addEventListener('show.bs.modal', event => {
       const button = event.relatedTarget
       document.getElementById('editSaveBtn').dataset.id = button.dataset.id
       document.getElementById('editUserName').value = button.dataset.username || ''
       document.getElementById('editReferralCode').value = button.dataset.referralCode || ''
-      document.getElementById('editUserBalance').value = parseFloat(button.dataset.balance || 0) / 100
+      document.getElementById('editUserBalance').value = parseFloat(button.dataset.balance || 0).toFixed(2);
       document.getElementById('editPassword').value = button.dataset.password || ''
       document.getElementById('editSecurityPin').value = button.dataset.securityPin || ''
       document.getElementById('editUserPhone').value = button.dataset.phone || ''
@@ -382,6 +520,149 @@
 
     document.getElementById('sidebarToggle').addEventListener('click', function() {window.scrollTo(0, 0);});
 
+    const cycleOrdersModal = document.getElementById('cycleOrdersModal');
+    cycleOrdersModal.addEventListener('show.bs.modal', function (event) {
+      const userId = parseInt(event.relatedTarget.dataset.id);
+      this.dataset.userId = userId;
+      const ordersBody = document.getElementById('modalOrdersBody');
+      const token = localStorage.getItem('token');
+
+      ordersBody.innerHTML = `<tr><td colspan="10" class="text-center">正在加载订单...</td></tr>`;
+
+      axios.get(`/cycles?userId=${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(res => {
+        const activeCycle = (res.data.data || [])[0];
+
+        if (!activeCycle) {
+          ordersBody.innerHTML = `<tr><td colspan="10" class="text-center text-warning">该用户没有进行中的任务环</td></tr>`;
+          return;
+        }
+
+        // 预填设置
+        document.getElementById('modalCycleSize').value = activeCycle.cycle_size || '';
+        document.getElementById('modalBlockers').value = (activeCycle.blocker_indexes || []).join(',');
+        document.getElementById('modalCommission').value = activeCycle.commission_rate || 0;
+
+        currentModalCycleId = activeCycle.id;
+
+        // 填充订单表格
+        const orders = activeCycle.orders || [];
+        if (orders.length === 0) {
+          ordersBody.innerHTML = `<tr><td colspan="10" class="text-center text-warning">暂无订单</td></tr>`;
+          return;
+        }
+
+        let html = orders.map((o, index) => {
+          const amount = Number(o.amount || 0);
+          const commission = Number(o.commission || 0);
+          const ratePct = amount ? (commission / amount * 100) : 0;
+          const completedText = o.completed_at ? new Date(o.completed_at).toLocaleString() : '未完成';
+          const imgHtml = o.image_url
+            ? `<img src="${o.image_url}" class="img-thumbnail" style="width:48px;height:48px;object-fit:cover;">`
+            : `<span class="text-muted">-</span>`;
+
+          return `
+            <tr data-id="${o.id}">
+              <td class='text-center'>${index + 1}</td>
+              <td class='text-center'>${imgHtml}</td>
+              <td class='text-center'>${o.product_name || '-'}</td>
+              <td class='text-center'>${amount.toFixed(2)}</td>
+              <td class='text-center'>${completedText}</td>
+              <td class='text-center'>${ratePct.toFixed(2)}%</td>
+              <td class='text-center'>${commission.toFixed(2)}</td>
+              <td class='text-center'>
+                <button class="btn btn-outline-warning btn-sm" onclick="makeRowEditable(this)">
+                  <i class="bi bi-pencil-square"></i>
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        html += `
+          <tr class="table-success fw-bold">
+            <td colspan="6" class="text-end">累计佣金</td>
+            <td colspan="2">${Number(activeCycle.commission_amount || 0).toFixed(2)}</td>
+          </tr>
+        `;
+
+        ordersBody.innerHTML = html;
+      }).catch(err => {
+        console.error(err);
+        ordersBody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">加载订单失败</td></tr>`;
+      });
+    });
+
+    const teamModal = document.getElementById('teamModal');
+    teamModal.addEventListener('show.bs.modal', async function (event) {
+      const button = event.relatedTarget;
+      const userId = button.getAttribute('data-id');
+      const username = button.getAttribute('data-username');
+
+      const tbody = teamModal.querySelector('#teamTableBody');
+      const owner = teamModal.querySelector('#teamOwner');
+      const totalCommEl = document.getElementById('totalCommissionValue');
+
+      if (owner) owner.textContent = `（${username}）`;
+      tbody.innerHTML = `<tr><td colspan="3" class="text-muted">加载中...</td></tr>`;
+      if (totalCommEl) totalCommEl.textContent = '$0.00';
+
+      try {
+        const { data } = await axios.get(`${window.location.origin}/team/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const list = data?.data || [];
+        if (!list.length) {
+          tbody.innerHTML = `<tr><td colspan="3" class="text-muted">暂无团队成员</td></tr>`;
+          return;
+        }
+
+        let total = 0;
+        tbody.innerHTML = list.map(m => {
+          const amt = Number(m.commission_amount) || 0;
+          total += amt;
+          return `
+            <tr>
+              <td>${m.username}</td>
+              <td>${m.vip_level || '-'}</td>
+              <td>$${amt.toFixed(2)}</td>
+            </tr>
+          `;
+        }).join('');
+
+        if (totalCommEl) totalCommEl.textContent = `$${total.toFixed(2)}`;
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="3" class="text-danger">加载失败</td></tr>`;
+      }
+    });
+    
+    const confirmResetModal = document.getElementById('confirmResetModal');
+    confirmResetModal.addEventListener('show.bs.modal', function(event) {
+      const btn = event.relatedTarget;
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      document.getElementById('confirmResetBtn').dataset.id = id;
+    });
+
+    document.getElementById('confirmResetBtn').addEventListener('click', async function() {
+      const id = this.dataset.id;
+      const token = localStorage.getItem('token');
+      try {
+        await axios.post(`${window.location.origin}/cycle/reset`, {
+          userId: id
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        bootstrap.Modal.getInstance(confirmResetModal).hide();
+        location.reload();
+      } catch (err) {
+        alert('Reset failed');
+        console.error(err);
+      }
+    });
+
     const confirmDeleteModal = document.getElementById('confirmDeleteModal');
     confirmDeleteModal.addEventListener('show.bs.modal', function(event) {
       const btn = event.relatedTarget;
@@ -389,7 +670,7 @@
       const id = btn.getAttribute('data-id');
       document.getElementById('confirmDeleteBtn').dataset.id = id;
     });
-    
+
     document.getElementById('confirmDeleteBtn').addEventListener('click', async function() {
       const id = this.dataset.id;
       const token = localStorage.getItem('token');
@@ -434,6 +715,129 @@
         console.error('Update failed:', err);
         alert('Error updating user');
       });
+    }
+
+    function makeRowEditable(btn) {
+      const row = btn.closest('tr');
+      const id = row.dataset.id;
+      const cells = row.querySelectorAll('td');
+      const table = row.closest('table');
+
+      // 保存原始内容
+      row.dataset.originalAmount = cells[3].textContent.trim();
+      row.dataset.originalRate = cells[5].textContent.trim();
+      row.dataset.originalCommission = cells[6].textContent.trim();
+
+      // 可编辑字段
+      const amountCell = cells[3];
+      const commissionRateCell = cells[5];
+      const commissionCell = cells[6];
+
+      const originalAmount = parseFloat(row.dataset.originalAmount) || 0;
+      const originalRate = parseFloat(row.dataset.originalRate) || 0;
+
+      // helper: 重新计算佣金并更新单元格
+      function recalcCommission() {
+        const amount = parseFloat(row.querySelector('td:nth-child(4) input').value) || 0;
+        const rate = parseFloat(row.querySelector('td:nth-child(6) input').value) || 0;
+        const commission = amount * rate / 100;
+        commissionCell.textContent = commission.toFixed(2);
+
+        // 更新总计
+        updateCycleCommission(table);
+      }
+
+      amountCell.innerHTML = `
+        <input type="number" step="0.01" class="form-control form-control-sm"
+              value="${originalAmount}" oninput="this.closest('tr').recalcCommission()">
+      `;
+
+      commissionRateCell.innerHTML = `
+        <input type="number" step="0.01" class="form-control form-control-sm"
+              value="${originalRate}" oninput="this.closest('tr').recalcCommission()">
+      `;
+
+      // 把函数挂到当前行，oninput 可用
+      row.recalcCommission = recalcCommission;
+
+      // 替换按钮
+      cells[7].innerHTML = `
+        <button class="btn btn-outline-success btn-sm" onclick="saveRow(this, '${id}')">
+          <i class="bi bi-check-lg"></i>
+        </button>
+        <button class="btn btn-outline-danger btn-sm" onclick="cancelEdit(this)">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      `;
+    }
+
+    function saveRow(btn, id) {
+      const row = btn.closest('tr');
+      const inputs = row.querySelectorAll('input');
+      const newAmount = parseFloat(inputs[0].value) || 0;
+      const newRate = parseFloat(inputs[1].value) || 0;
+
+      // 计算新佣金
+      const newCommission = newAmount * newRate / 100;
+
+      axios.put(`/orders/${id}`, {
+        amount: newAmount,
+        commission_rate: newRate
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      }).then(res => {
+        // 更新表格
+        row.querySelectorAll('td')[3].textContent = newAmount.toFixed(2);
+        row.querySelectorAll('td')[5].textContent = newRate.toFixed(2);
+        row.querySelectorAll('td')[6].textContent = newCommission.toFixed(2);
+
+        // 按钮复原
+        row.querySelectorAll('td')[7].innerHTML = `
+          <button class="btn btn-outline-warning btn-sm" onclick="makeRowEditable(this)">
+            <i class="bi bi-pencil-square"></i>
+          </button>
+        `;
+
+        // 同步刷新 cycle 总佣金
+        updateCycleCommission(row.closest('table'));
+      }).catch(err => {
+        console.error(err);
+        alert('保存失败');
+      });
+    }
+
+    function cancelEdit(btn) {
+      const row = btn.closest('tr');
+      const cells = row.querySelectorAll('td');
+
+      // 还原原始值
+      cells[3].textContent = row.dataset.originalAmount;
+      cells[5].textContent = row.dataset.originalRate;
+      cells[6].textContent = row.dataset.originalCommission;
+      
+      cells[7].innerHTML = `
+        <button class="btn btn-outline-warning btn-sm" onclick="makeRowEditable(this)">
+          <i class="bi bi-pencil-square"></i>
+        </button>
+      `;
+    }
+
+    function updateCycleCommission(table) {
+      const rows = table.querySelectorAll('tbody tr');
+      let total = 0;
+      rows.forEach(r => {
+        const cells = r.querySelectorAll('td');
+        if (cells.length >= 7 && !r.classList.contains('table-success')) {
+          const completedText = cells[4]?.textContent?.trim() || "";
+          // 排除未完成
+          if (completedText !== "未完成") {
+            const val = parseFloat(cells[6].textContent);
+            if (!isNaN(val)) total += val;
+          }
+        }
+      });
+      const summaryRow = table.querySelector('tr.table-success td:last-child');
+      if (summaryRow) summaryRow.textContent = total.toFixed(2);
     }
 
     function Logout() {

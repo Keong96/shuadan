@@ -29,7 +29,6 @@
   "register.have_account": "已有账户？",
   "register.login_now": "立即登录",
 
-  "footer.company": "Summit Asset Capital",
   "footer.rights": "版权所有",
 
   "nav.home": "首页",
@@ -162,8 +161,6 @@
   "modal.team.sales": "销售额 (USDT)",
   "modal.team.commission": "佣金 (USDT)",
   "modal.team.total": "总计",
-  "modal.team.totalSales": "总销售额",
-  "modal.team.totalCommission": "总佣金",
 
   "modal.security.title": "安全中心",
   "modal.security.old_password": "旧密码",

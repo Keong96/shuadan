@@ -60,7 +60,7 @@
   <!-- Navigation bar -->
   <nav class="navbar navbar-expand-lg fixed-top">
     <div class="container">
-      <a class="navbar-brand text-white" href="index.html">Summit Asset Capital</a>
+      <a id="navbarBrand" class="navbar-brand text-white" href="index.html">Summit Asset Capital</a>
     </div>
   </nav>
 
@@ -86,6 +86,18 @@
     </div>
   </footer>
   <script>
+    axios.get('/company-name')
+    .then(res => {
+      if (res.data.success && res.data.company_name) {
+        document.title = res.data.company_name
+        document.querySelector('footer p'.innerHTML = `&copy; 2025 ${res.data.company_name}. All rights reserved.`);
+        document.getElementById('navbarBrand').innerText = res.data.company_name;
+      }
+    })
+    .catch(err => {
+      console.error('Failed to fetch company name:', err)
+    })
+
     localStorage.removeItem("token");
     window.stop();
   </script>

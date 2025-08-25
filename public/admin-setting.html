@@ -51,8 +51,7 @@
       <nav class="nav flex-column px-3 pt-4">
         <a class="nav-link" href="admin-dashboard.html"><i class="bi bi-speedometer2 me-2"></i>控制面板</a>
         <a class="nav-link" href="/admin-user.html"><i class="bi bi-box-seam me-2"></i>用户管理</a>
-        <a class="nav-link" href="/admin-task.html"><i class="bi bi-box-seam me-2"></i>任务模版</a>
-        <a class="nav-link" href="/admin-order.html"><i class="bi bi-box-seam me-2"></i>订单管理</a>
+        <a class="nav-link" href="/admin-task.html"><i class="bi bi-box-seam me-2"></i>产品管理</a>
         <a class="nav-link" href="/admin-transaction.html"><i class="bi bi-bank me-2"></i>交易明细</a>
         <a class="nav-link active" href="/admin-setting.html"><i class="bi bi-receipt me-2"></i>全局设定</a>
         <a class="nav-link" href="#" onclick="Logout()"><i class="bi bi-box-arrow-right me-2"></i>登出</a>
@@ -102,7 +101,8 @@
       const configLabels = {
         blocker_indexes: '卡单位置',
         commission_rate: '佣金比例',
-        cycle_size: '任务环数'
+        company_name: '公司名称',
+        vip_tiers: 'VIP等级'
       };
 
       const res = await axios.get('/config', { headers:{Authorization:`Bearer ${token}`} });
@@ -110,11 +110,12 @@
       tbody.innerHTML = '';
 
       res.data.data.forEach(row => {
-        const label = configLabels[row.key] || row.key; // 没有翻译的就显示原 key
+        const label = configLabels[row.key] || row.key;
+        const rows = row.key === 'vip_tiers' ? 7 : 1; // vip_tiers 用 5 行，其它默认 1 行
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${label}</td>
-          <td><input type="text" class="form-control" value="${row.value}" data-key="${row.key}"></td>
+          <td><textarea class="form-control" id="config-${row.key}" rows="${rows}">${row.value}</textarea></td>
           <td><button class="btn btn-sm btn-primary save-config" data-key="${row.key}">保存</button></td>
         `;
         tbody.appendChild(tr);

@@ -119,6 +119,24 @@ app.get('/register', (req, res) => {
 });
 
 // Endpoint
+
+app.get('/company-name', async (req, res) => {
+  try {
+    const result = await client.query(
+      "SELECT value FROM config WHERE key = 'company_name' LIMIT 1"
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'company_name not found' })
+    }
+
+    res.json({ success: true, company_name: result.rows[0].value })
+  } catch (err) {
+    console.error('Error fetching company name:', err)
+    res.status(500).json({ success: false, message: 'Internal server error' })
+  }
+})
+
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   const lang = req.headers['accept-language'] || 'en';
@@ -339,43 +357,67 @@ app.post('/orders', verifyToken, async (req, res) => {
   const userId = req.user.userId;
 
   try {
-    // 1) 从 config 表读取运营配置
+    // 读取必要 config：vip_tiers, blocker_indexes
     const cfgRes = await client.query(
-      "SELECT key, value FROM config WHERE key IN ('cycle_size','blocker_indexes','commission_rate')"
+      "SELECT key, value FROM config WHERE key IN ('vip_tiers','blocker_indexes')"
     );
-    const cfgMap = Object.fromEntries(cfgRes.rows.map(r => [r.key, r.value]));
-    const cycleSize      = parseInt(cfgMap.cycle_size, 10);
-    const blockerIndexes = cfgMap.blocker_indexes.split(',').map(n => parseInt(n, 10));
-    const commissionRate = parseFloat(cfgMap.commission_rate);
+    const cfgMap = Object.fromEntries(cfgRes.rows.map(r => [r.key, r.value || '']));
 
-    // 2) 查找激活周期（包含 commission_amount）
+    // 解析 vip_tiers JSON
+    let vipTiers = {};
+    try { vipTiers = JSON.parse(cfgMap.vip_tiers || '{}'); } catch (e) { vipTiers = {}; }
+
+    // 解析 blocker_indexes -> 数组 of int
+    const blockerIndexes = (cfgMap.blocker_indexes || '')
+      .split(',')
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => !Number.isNaN(n));
+
+    // 读取用户 vip_level（若无，默认 BASIC）
+    const ures = await client.query("SELECT vip_level FROM users WHERE id = $1", [userId]);
+    const vipLevel = (ures.rows[0] && ures.rows[0].vip_level) ? ures.rows[0].vip_level : 'BASIC';
+
+    // 取该 vip 的配置（如果没在 config 里，做 fallback）
+    const vipCfg = vipTiers[vipLevel] || vipTiers['BASIC'] || { cycle_size: 20, commission_rate: 0.03 };
+    const vipCycleSize = parseInt(vipCfg.cycle_size, 10) || 20;
+    const vipCommissionRate = parseFloat(vipCfg.commission_rate) || 0.03;
+
+    // 2) 查找激活周期（status = TRUE）
     let cr = await client.query(
-      "SELECT id, orders, cycle_size, blocker_indexes, commission_amount FROM cycles WHERE user_id = $1 AND status = TRUE ORDER BY id DESC LIMIT 1",
+      "SELECT id, orders, cycle_size, blocker_indexes, commission_amount, commission_rate FROM cycles WHERE user_id = $1 AND status = TRUE AND deleted_at IS NULL ORDER BY id DESC LIMIT 1",
       [userId]
     );
     let cycle = cr.rows[0];
 
-    // 3) 如果没有激活周期，就新建一个
+    // 3) 如果没有激活周期，就按用户 vip 创建一个新的（把 blocker_indexes、cycle_size、commission_rate 写入 cycle）
     if (!cycle) {
+      // blocker_indexes 存为 int[]，用上面解析的全局 blockerIndexes（或者你也可以把 blocker_indexes 存在 vipCfg）
+      const blockerArray = blockerIndexes.length ? blockerIndexes : null; // pass null if empty
       const ins = await client.query(
-        "INSERT INTO cycles (user_id, cycle_size, blocker_indexes) VALUES ($1, $2, $3) RETURNING id, orders, cycle_size, blocker_indexes, commission_amount",
-        [userId, cycleSize, blockerIndexes]
+        `INSERT INTO cycles (user_id, cycle_size, blocker_indexes, commission_rate, commission_amount, orders, status, created_at)
+         VALUES ($1, $2, $3, $4, 0, '{}', TRUE, NOW())
+         RETURNING id, orders, cycle_size, blocker_indexes, commission_amount, commission_rate`,
+        [userId, vipCycleSize, blockerArray, vipCommissionRate]
       );
       cycle = ins.rows[0];
     }
 
-    // 4) 如果当前周期已完成，返回待领佣金
-    const completed = Array.isArray(cycle.orders) ? cycle.orders.length : 0;
-    if (completed >= cycle.cycle_size) {
+    // 4) 如果当前周期已完成（订单数 >= cycle_size），返回待领佣金
+    const completedCount = Array.isArray(cycle.orders) ? cycle.orders.length : 0;
+    if (completedCount >= cycle.cycle_size) {
       return res.json({
         status: true,
-        data: parseFloat(cycle.commission_amount).toFixed(2)
+        data: parseFloat(cycle.commission_amount || 0).toFixed(2)
       });
     }
 
     // 5) 检查是否已有未完成的 pending 订单
     const pending = await client.query(
-      "SELECT o.id, o.amount, o.commission, t.product_name, t.product_description, t.image_url FROM orders o JOIN tasks t ON o.task_id = t.id WHERE o.user_id = $1 AND o.cycle_id = $2 AND o.status = 'PENDING' AND o.deleted_at IS NULL LIMIT 1",
+      `SELECT o.id, o.amount, o.commission, t.product_name, t.product_description, t.image_url
+       FROM orders o
+       JOIN tasks t ON o.task_id = t.id
+       WHERE o.user_id = $1 AND o.cycle_id = $2 AND o.status = 'PENDING' AND o.deleted_at IS NULL
+       LIMIT 1`,
       [userId, cycle.id]
     );
     if (pending.rowCount) {
@@ -383,61 +425,57 @@ app.post('/orders', verifyToken, async (req, res) => {
       return res.json({
         status: true,
         data: {
-          orderId:           o.id,
-          amount:            o.amount,
-          commission:        o.commission,
-          productName:       o.product_name,
+          orderId: o.id,
+          amount: o.amount,
+          commission: o.commission,
+          productName: o.product_name,
           productDescription: o.product_description,
-          productImage:      o.image_url
+          productImage: o.image_url
         }
       });
     }
 
-    // 6) 获取当前余额
-    const br = await client.query("SELECT balance FROM users WHERE id = $1", [userId]);
-    const balance = parseFloat(br.rows[0].balance);
+    // 6) 计算 idx，判断是否是 blocker（以 cycle.blocker_indexes 为准）
+    const idx = completedCount + 1;
+    const cycleBlockers = Array.isArray(cycle.blocker_indexes) ? cycle.blocker_indexes : blockerIndexes;
+    const isBlocker = Array.isArray(cycleBlockers) && cycleBlockers.includes(idx);
 
-    // 7) 计算本次订单金额和佣金
-    const idx       = completed + 1;
-    const isBlocker = blockerIndexes.includes(idx);
-    let amount;
-    if (isBlocker) {
-      amount = balance * (1.10 + Math.random() * 0.10);
-    } else {
-      amount = balance * (0.04 + Math.random() * 0.02);
-    }
-    amount     = parseFloat(amount.toFixed(2));
-    const commission = parseFloat((amount * commissionRate).toFixed(2));
-
-    // 8) 随机分配一个任务
-    const taskRes = await client.query("SELECT * FROM tasks WHERE deleted_at IS NULL ORDER BY RANDOM() LIMIT 1");
+    // 7) 随机选 task（task 表必须有 product_price 与 blocker_price 字段）
+    const taskRes = await client.query("SELECT id, product_name, product_description, image_url, product_price, blocker_price FROM tasks WHERE deleted_at IS NULL ORDER BY RANDOM() LIMIT 1");
     if (taskRes.rowCount === 0) {
       return res.status(400).json({ status: false, message: 'No available tasks' });
     }
     const task = taskRes.rows[0];
 
-    // 9) 插入新订单
+    // 8) 金额直接取 task 中的价格；佣金以 cycle.commission_rate（已经为小数）计算
+    const amount = parseFloat(isBlocker ? task.blocker_price : task.product_price);
+    if (Number.isNaN(amount)) return res.status(400).json({ status: false, message: 'Invalid task price' });
+
+    const commission = parseFloat((amount * parseFloat(cycle.commission_rate || vipCommissionRate)).toFixed(2));
+
+    // 9) 插入订单（状态 PENDING），并把 order id append 到 cycles.orders（不改变 commission_amount）
     const or = await client.query(
-      "INSERT INTO orders (user_id, cycle_id, task_id, amount, commission) VALUES ($1, $2, $3, $4, $5) RETURNING id, amount, commission",
+      `INSERT INTO orders (user_id, cycle_id, task_id, amount, commission, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, 'PENDING', NOW())
+       RETURNING id, amount, commission`,
       [userId, cycle.id, task.id, amount, commission]
     );
 
-    // 10) 更新 cycle.orders 和 cycle.commission_amount
     await client.query(
-      "UPDATE cycles SET orders = array_append(orders, $1), commission_amount = commission_amount + $2 WHERE id = $3",
-      [or.rows[0].id, or.rows[0].commission, cycle.id]
+      `UPDATE cycles SET orders = array_append(COALESCE(orders, '{}'), $1) WHERE id = $2`,
+      [or.rows[0].id, cycle.id]
     );
 
-    // 11) 返回给前端
+    // 10) 返回新订单给前端
     res.json({
       status: true,
       data: {
-        orderId:           or.rows[0].id,
-        amount:            or.rows[0].amount,
-        commission:        or.rows[0].commission,
-        productName:       task.product_name,
+        orderId: or.rows[0].id,
+        amount: or.rows[0].amount,
+        commission: or.rows[0].commission,
+        productName: task.product_name,
         productDescription: task.product_description,
-        productImage:      task.image_url
+        productImage: task.image_url
       }
     });
 
@@ -487,6 +525,12 @@ app.post('/orders/:id/review', verifyToken, async (req, res) => {
       SET review_rating = $1, review_comment = $2, completed_at = CURRENT_TIMESTAMP, status = 'COMPLETED'
       WHERE id = $3
     `, [rating, comment, orderId]);
+
+    await client.query(`
+      UPDATE cycles 
+      SET commission_amount = commission_amount + $1
+      WHERE id = $2
+    `, [commission, order.cycle_id]);
 
     res.json({ status: true });
   } catch (err) {
@@ -550,6 +594,21 @@ app.post('/claim-commission', verifyToken, async (req, res) => {
     const commission = parseFloat(sumRes.rows[0].total || 0);
     if (commission <= 0)
       return res.status(400).json({ status: false, message: t('commission.claim.error.noCommission') });
+
+    const downlineRate = 0.25;
+    const ures = await client.query(`SELECT referred_by FROM users WHERE id = $1`, [userId]);
+    const referredBy = ures.rows[0] ? ures.rows[0].referred_by : null;
+
+    if (referredBy) {
+      const refererShare = parseFloat((commission * downlineRate).toFixed(2));
+      if (refererShare > 0) {
+        const remark = `Downline share from user ${userId} cycle ${current.id}`;
+        await client.query(`
+          INSERT INTO transactions (user_id, type, amount, status, remark)
+          VALUES ($1, 'COMMISSION', $2, 'PENDING', $3)
+        `, [referredBy, refererShare, remark]);
+      }
+    }
 
     await client.query(`
       INSERT INTO transactions (user_id, type, amount, status, remark) 
@@ -629,16 +688,49 @@ app.post('/withdraw', verifyToken, async (req, res) => {
   }
 });
 
+app.get('/team', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const { rows } = await client.query(`
+      SELECT
+        u.id,
+        u.username,
+        u.vip_level,
+        COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' THEN o.commission ELSE 0 END), 0) AS downline_commission
+      FROM users u
+      LEFT JOIN orders o
+        ON o.user_id = u.id
+       AND o.deleted_at IS NULL
+      WHERE u.referred_by = $1
+        AND u.deleted_at IS NULL
+      GROUP BY u.id, u.username, u.vip_level
+      ORDER BY u.id DESC
+    `, [userId]);
+
+    const data = rows.map(r => ({
+      username: r.username,
+      vip_level: r.vip_level,
+      commission_amount: Number(r.downline_commission) * 0.25
+    }));
+
+    res.json({ status: true, data });
+  } catch (err) {
+    console.error('Error fetching user team:', err);
+    res.status(500).json({ status: false, error: 'Failed to fetch team' });
+  }
+});
+
 // Admin
 app.get('/users', verifyAdminToken, async (req, res) => {
   try {
     const result = await client.query(`
       SELECT id, username, password, security_pin, phone, email, gender,
-            TO_CHAR(dob, 'YYYY-MM-DD') AS dob, balance, referral_code, referred_by,
-            status, user_type, vip_level, credit_score, last_login, created_at
+        TO_CHAR(dob, 'YYYY-MM-DD') AS dob, balance, referral_code, referred_by,
+        status, user_type, vip_level, credit_score, last_login, created_at
       FROM users
       WHERE user_type = 2 AND deleted_at IS NULL
-      ORDER BY id DESC
+      ORDER BY id ASC
     `);
 
     res.json({
@@ -744,11 +836,13 @@ app.get('/tasks/:id', verifyAdminToken, async (req, res) => {
 });
 
 app.post('/tasks', verifyAdminToken, async (req, res) => {
-  const { productName, imageUrl, taskDescription } = req.body;
+  const { productName, imageUrl, taskDescription, productPrice, blockerPrice } = req.body;
   try {
     const result = await client.query(
-      `INSERT INTO tasks (product_name, image_url, product_description) VALUES ($1,$2,$3) RETURNING *`,
-      [productName, imageUrl, taskDescription]
+      `INSERT INTO tasks (product_name, image_url, product_description, product_price, blocker_price)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [productName, imageUrl, taskDescription, productPrice, blockerPrice]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -759,11 +853,18 @@ app.post('/tasks', verifyAdminToken, async (req, res) => {
 
 app.put('/tasks/:id', verifyAdminToken, async (req, res) => {
   const { id } = req.params;
-  const { productName, imageUrl, taskDescription } = req.body;
+  const { productName, imageUrl, taskDescription, productPrice, blockerPrice } = req.body;
   try {
     const result = await client.query(
-      'UPDATE tasks SET product_name = $1, image_url = $2, task_description = $3, WHERE id = $4 AND deleted_at IS NULL RETURNING *',
-      [productName, imageUrl, taskDescription, id]
+      `UPDATE tasks 
+       SET product_name = $1, 
+           image_url = $2, 
+           product_description = $3,
+           product_price = $4,
+           blocker_price = $5
+       WHERE id = $6 AND deleted_at IS NULL 
+       RETURNING *`,
+      [productName, imageUrl, taskDescription, productPrice, blockerPrice, id]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Task not found' });
     res.json(result.rows[0]);
@@ -786,46 +887,173 @@ app.delete('/tasks/:id', verifyAdminToken, async (req, res) => {
   }
 });
 
+app.put('/orders/:id', verifyAdminToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount, commission_rate } = req.body;
+
+    const result = await client.query(`
+      UPDATE orders SET amount = $1, commission = $2
+      WHERE id = $3 AND deleted_at IS NULL
+      RETURNING *, cycle_id;
+  `, [amount, (amount * commission_rate / 100), id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ status: false, error: 'Order not found' });
+    }
+
+    const order = result.rows[0];
+
+    await client.query(`
+      UPDATE cycles
+      SET commission_amount = (
+        SELECT COALESCE(SUM(o.commission), 0)
+        FROM orders o
+        WHERE o.id = ANY(cycles.orders) 
+          AND o.status = 'COMPLETED'
+          AND o.deleted_at IS NULL
+      )
+      WHERE id = $1;
+    `, [order.cycle_id]);
+
+    res.json({ status: true, data: order });
+  } catch (err) {
+    console.error('Error updating order:', err);
+    res.status(500).json({ status: false, error: 'Update failed' });
+  }
+});
+
 app.get('/cycles', verifyAdminToken, async (req, res) => {
   try {
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).json({ status: false, error: 'Missing userId' });
+    }
+
     const cyclesResult = await client.query(`
       SELECT c.*, u.username
       FROM cycles c
       LEFT JOIN users u ON u.id = c.user_id
       WHERE c.deleted_at IS NULL
+        AND c.status = TRUE
+        AND c.user_id = $1
       ORDER BY c.id DESC
-    `);
-    const cycles = cyclesResult.rows;
+      LIMIT 1
+    `, [userId]);
 
-    if (!cycles.length) {
+    if (cyclesResult.rowCount === 0) {
       return res.json({ status: true, data: [] });
     }
 
-    const cycleIds = cycles.map(c => c.id);
+    const activeCycle = cyclesResult.rows[0];
 
     const ordersResult = await client.query(`
       SELECT o.*, 
-             u.username AS order_username,
-             t.product_name
+            u.username AS order_username,
+            t.product_name,
+            t.image_url
       FROM orders o
       LEFT JOIN users u ON u.id = o.user_id
       LEFT JOIN tasks t ON t.id = o.task_id
-      WHERE o.cycle_id = ANY($1::int[])
-      ORDER BY o.id DESC
-    `, [cycleIds]);
+      WHERE o.cycle_id = $1
+      ORDER BY 
+        CASE WHEN o.completed_at IS NULL THEN 1 ELSE 0 END,
+        o.completed_at ASC
+    `, [activeCycle.id]);
 
-    const orders = ordersResult.rows;
+    activeCycle.orders = ordersResult.rows;
+    activeCycle.commission_rate = parseFloat(activeCycle.commission_rate) || 0;
 
-    const cyclesWithOrders = cycles.map(cycle => ({
-      ...cycle,
-      orders: orders.filter(o => o.cycle_id === cycle.id)
-    }));
-
-    res.json({ status: true, data: cyclesWithOrders });
+    res.json({ status: true, data: [activeCycle] });
 
   } catch (err) {
     console.error('Error fetching cycles:', err);
     res.status(500).json({ status: false, error: 'Fetch failed' });
+  }
+});
+
+app.post('/cycle/reset', verifyAdminToken, async (req, res) => {
+  const userId = req.body.userId;
+  if (!userId) return res.status(400).json({ status: false, error: 'Missing userId' });
+
+  try {
+    // 先读取当前 active cycle 的设置（取最新一笔 active）
+    const cur = await client.query(
+      `SELECT id, cycle_size, blocker_indexes, commission_rate
+       FROM cycles
+       WHERE user_id = $1 AND status = TRUE AND deleted_at IS NULL
+       ORDER BY id DESC
+       LIMIT 1`,
+      [userId]
+    );
+
+    // 按你说的：假设一定存在 active cycle（所以不做不存在的判定）
+    const old = cur.rows[0];
+
+    // 关闭该 cycle，并拿到 commission_amount（关闭时写 finished_at）
+    const upd = await client.query(
+      `UPDATE cycles
+       SET status = FALSE, finished_at = NOW()
+       WHERE id = $1
+       RETURNING commission_amount`,
+      [old.id]
+    );
+
+    const commissionAmount = parseFloat(upd.rows[0]?.commission_amount || 0);
+
+    // 1) 给用户发放佣金（直接插入 transaction 并更新用户余额）
+    if (commissionAmount > 0) {
+      await client.query(
+        `INSERT INTO transactions (user_id, amount, type, status, remark, created_at)
+         VALUES ($1, $2, 'COMMISSION', 'APPROVED', $3, NOW())`,
+        [userId, commissionAmount, ``]
+      );
+
+      await client.query(
+        `UPDATE users SET balance = balance + $1 WHERE id = $2`,
+        [commissionAmount, userId]
+      );
+    }
+
+    // 2) 给上级分成（固定 25%）
+    const downlineRate = 0.25;
+    const ures = await client.query(`SELECT referred_by FROM users WHERE id = $1`, [userId]);
+    const referredBy = ures.rows[0]?.referred_by || null;
+
+    if (referredBy && commissionAmount > 0) {
+      const refererShare = parseFloat((commissionAmount * downlineRate).toFixed(2));
+      if (refererShare > 0) {
+        await client.query(
+          `INSERT INTO transactions (user_id, amount, type, status, remark, created_at)
+           VALUES ($1, $2, 'COMMISSION', 'APPROVED', $3, NOW())`,
+          [referredBy, refererShare, `Downline share from user ${userId} cycle ${old.id}`]
+        );
+
+        await client.query(
+          `UPDATE users SET balance = balance + $1 WHERE id = $2`,
+          [refererShare, referredBy]
+        );
+      }
+    }
+
+    // 3) 创建新 cycle（继承旧 cycle 的设置）
+    await client.query(
+      `INSERT INTO cycles (user_id, cycle_size, blocker_indexes, commission_rate, commission_amount, orders, status, created_at)
+       VALUES ($1, $2, $3, $4, 0, '{}', TRUE, NOW())`,
+      [
+        userId,
+        old.cycle_size || 20,
+        old.blocker_indexes || null,
+        parseFloat(old.commission_rate) || 0.03
+      ]
+    );
+
+    // 只回 status true（不要多余字段）
+    return res.json({ status: true });
+
+  } catch (err) {
+    console.error('POST /cycle/:userId/reset error:', err);
+    return res.status(500).json({ status: false, error: 'Reset failed' });
   }
 });
 
@@ -942,6 +1170,39 @@ app.delete('/transactions/:id', verifyAdminToken, async (req, res) => {
   } catch (err) {
     console.error(`DELETE /transactions/${req.params.id}`, err);
     res.status(500).json({ status: false, message: 'Server error' });
+  }
+});
+
+app.get('/team/:id', verifyAdminToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { rows } = await client.query(`
+      SELECT
+        u.id,
+        u.username,
+        u.vip_level,
+        COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' THEN o.commission ELSE 0 END), 0) AS downline_commission
+      FROM users u
+      LEFT JOIN orders o
+        ON o.user_id = u.id
+       AND o.deleted_at IS NULL
+      WHERE u.referred_by = $1
+        AND u.deleted_at IS NULL
+      GROUP BY u.id, u.username, u.vip_level
+      ORDER BY u.id DESC
+    `, [id]);
+
+    const data = rows.map(r => ({
+      username: r.username,
+      vip_level: r.vip_level,
+      commission_amount: Number(r.downline_commission) * 0.25
+    }));
+
+    res.json({ status: true, data });
+  } catch (err) {
+    console.error('Error fetching admin team:', err);
+    res.status(500).json({ status: false, error: 'Failed to fetch team' });
   }
 });
 

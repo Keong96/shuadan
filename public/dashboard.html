@@ -19,8 +19,9 @@
     html, body {
       height:100%;
       font-family:sans-serif;
-      background: linear-gradient(90deg,#eef2f5 0%,#cfe9ff 100%);
+      /* background: linear-gradient(90deg,#eef2f5 0%,#cfe9ff 100%); */
       padding-top:20px;
+      background: url('img/background.jpg') repeat;
     }
     .tab, .card {
       width:85%;
@@ -31,6 +32,7 @@
     }
     .card-body { 
       padding:16px;
+      border-radius: 1rem;
     }
     h5 {
       margin-bottom:12px;
@@ -249,10 +251,10 @@
     <!-- Section 2: Funds -->
     <section id="section-funds" class="d-none px-2">
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <h6 class="fw-bold text-primary">
+        <h5 class="mb-3 px-3 text-white">
           <i class="bi bi-list-columns-reverse me-1"></i>
           <span data-i18n="funds.transaction.title">Transaction History</span>
-        </h6>
+        </h5>
         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#withdrawModal">
           <i class="bi bi-download me-1"></i>
           <span data-i18n="funds.withdraw.title">Withdraw</span>
@@ -283,8 +285,9 @@
     <section id="section-tasks" class="d-none">
       <div class="card mb-3 position-relative">
         <button class="btn btn-light p-1 rounded-circle position-absolute top-0 end-0 m-2"
-                data-bs-toggle="modal" data-bs-target="#infoModal"
-                data-i18n="tasks.info.button" title="Info">
+            data-bs-toggle="modal" data-bs-target="#infoModal"
+            title="Info"
+            style="z-index:9999;">
           <i class="bi bi-question-circle"></i>
         </button>
         <div style="border-radius: 1rem; overflow: hidden;">
@@ -339,7 +342,7 @@
 
     <!-- Section 4: Records -->
     <section id="section-records" class="d-none">
-      <h5 class="mb-3 px-3">
+      <h5 class="mb-3 px-3 text-white">
         <i class="bi bi-clock-history me-2"></i>
         <span data-i18n="records.title">Task Records</span>
       </h5>
@@ -407,7 +410,7 @@
           </div>
           <div class="row justify-content-center mt-3">
             <div class="col-9">
-              <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#teamModal" data-i18n="profile.viewTeam">View Team</button>
+              <button class="btn btn-primary w-100" onclick="loadTeamModal()" data-bs-toggle="modal" data-bs-target="#teamModal" data-i18n="profile.viewTeam"></button>
             </div>
           </div>
         </div>
@@ -681,14 +684,6 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <div class="d-flex justify-content-center gap-3 mb-3">
-            <span class="badge bg-primary fs-5 py-2 px-3" id="totalSalesBadge">
-              <span data-i18n="modal.team.totalSales"></span> <br><br> $471.25
-            </span>
-            <span class="badge bg-success fs-5 py-2 px-3" id="totalCommissionBadge">
-              <span data-i18n="modal.team.totalCommission"></span> <br><br> $47.13
-            </span>
-          </div>
           <table class="table table-striped text-center">
             <thead>
               <tr>
@@ -698,10 +693,7 @@
               </tr>
             </thead>
             <tbody id="teamTableBody">
-              <tr><td>user001</td><td>$128.50</td><td>$12.85</td></tr>
-              <tr><td>user002</td><td>$300.00</td><td>$30.00</td></tr>
-              <tr><td>user003</td><td>$42.75</td><td>$4.28</td></tr>
-              <tr><td>user004</td><td>$0.00</td><td>$0.00</td></tr>
+              <!-- 动态加载 -->
             </tbody>
           </table>
         </div>
@@ -1062,7 +1054,7 @@
 
       document.querySelector('#section-profile h6').innerText = user.username
       const vipBadge = document.querySelector('#section-profile .badge')
-      vipBadge.innerText = `VIP ${user.vip_level || 0}`
+      vipBadge.innerText = `${user.vip_level || 0}`
 
       const starContainer = document.querySelector('#section-profile .d-flex.justify-content-center')
       const stars = Math.floor((user.credit_score || 0) / 20)
@@ -1160,10 +1152,43 @@
       populateTaskRecord(res.data.data)
     }
 
+    async function loadTeamModal() {
+      const teamModal = document.getElementById('teamModal');
+      const tbody = teamModal.querySelector('#teamTableBody');
+      tbody.innerHTML = `<tr><td colspan="3" class="text-muted">...</td></tr>`;
+
+      try {
+        const { data } = await axios.get(`${window.location.origin}/team`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const list = data?.data || [];
+        if (!list.length) {
+          tbody.innerHTML = `<tr><td colspan="3" class="text-muted">-</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = list.map(m => {
+          const sales = Number(m.total_sales || 0);
+          const commission = Number(m.commission_amount || 0);
+          return `
+            <tr>
+              <td>${m.username}</td>
+              <td>$${sales.toFixed(2)}</td>
+              <td>$${commission.toFixed(2)}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('error:', err);
+        tbody.innerHTML = `<tr><td colspan="3" class="text-danger">Error</td></tr>`;
+      }
+    }
+
     function populateTaskRecord(orders) {
       const section = document.getElementById('section-records')
       section.innerHTML = `
-        <h5 class="mb-3 px-3">
+        <h5 class="mb-3 px-3 text-white">
           <i class="bi bi-clock-history me-2"></i>
           <span data-i18n="records.title">Task Records</span>
         </h5>
@@ -1171,7 +1196,7 @@
 
       if (!orders.length) {
         section.innerHTML += `
-          <div class="text-center text-muted small mt-4" data-i18n="records.empty">
+          <div class="text-center text-white small mt-4" data-i18n="records.empty">
             No more records.
           </div>`
         return
@@ -1380,7 +1405,7 @@
         modal.hide();
       });
     });
-
+    
     async function claimCommission() {
       const res = await axios.post(`${window.location.origin}/claim-commission`, {}, {
           headers: {

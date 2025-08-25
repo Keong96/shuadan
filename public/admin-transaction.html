@@ -42,8 +42,7 @@
       <nav class="nav flex-column px-3 pt-4">
         <a class="nav-link" href="admin-dashboard.html"><i class="bi bi-speedometer2 me-2"></i>控制面板</a>
         <a class="nav-link" href="/admin-user.html"><i class="bi bi-box-seam me-2"></i>用户管理</a>
-        <a class="nav-link" href="/admin-task.html"><i class="bi bi-box-seam me-2"></i>任务模版</a>
-        <a class="nav-link" href="/admin-order.html"><i class="bi bi-box-seam me-2"></i>订单管理</a>
+        <a class="nav-link" href="/admin-task.html"><i class="bi bi-box-seam me-2"></i>产品管理</a>
         <a class="nav-link active" href="/admin-transaction.html"><i class="bi bi-bank me-2"></i>交易明细</a>
         <a class="nav-link" href="/admin-setting.html"><i class="bi bi-receipt me-2"></i>全局设定</a>
         <a class="nav-link" href="#" onclick="Logout()"><i class="bi bi-box-arrow-right me-2"></i>登出</a>
@@ -242,23 +241,36 @@
         const typeBadge = {
           DEPOSIT: '<span class="badge bg-success fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">充值</span>',
           WITHDRAWAL: '<span class="badge bg-danger fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">提现</span>',
-          PURCHASE: '<span class="badge bg-secondary fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">完成订单</span>',
-          COMMISSION: '<span class="badge bg-info text-dark fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">佣金</span>'
+          PURCHASE: '<span class="badge bg-secondary fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">订单</span>',
+          COMMISSION: '<span class="badge bg-warning text-dark fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">佣金</span>'
         }[t.type];
 
-        // 状态 Badge（中文+加大+内边距）
         const statusTextMap = {
           APPROVED: '已批准',
           REJECTED: '已拒绝',
           PENDING: '待处理'
         };
 
+        const statusClassMap = {
+          APPROVED: 'btn-success',
+          REJECTED: 'btn-danger',
+          PENDING: 'btn-secondary'
+        };
+
         const statusCell = (t.status === 'PENDING' && ['DEPOSIT', 'WITHDRAWAL'].includes(t.type))
-          ? `<button class="btn btn-sm btn-outline-success me-1" onclick="updateStatus(${t.id}, 'APPROVED')"><i class="bi bi-check-lg"></i></button>
-            <button class="btn btn-sm btn-outline-danger" onclick="updateStatus(${t.id}, 'REJECTED')"><i class="bi bi-x-lg"></i></button>`
-          : `<span class="badge ${t.status === 'APPROVED' ? 'bg-success' : 'bg-danger'} fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">
+          ? `
+            <button class="btn btn-sm btn-outline-success me-1" onclick="updateStatus(${t.id}, 'APPROVED')">
+              <i class="bi bi-check-lg"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="updateStatus(${t.id}, 'REJECTED')">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          `
+          : `
+            <span class="btn ${statusClassMap[t.status]} fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">
               ${statusTextMap[t.status] || t.status}
-            </span>`;
+            </span>
+          `;
 
         tbody.innerHTML += `
           <tr>
