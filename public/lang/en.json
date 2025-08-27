@@ -100,6 +100,7 @@
   "commModal.cancel": "Cancel",
   "commModal.confirm": "Confirm",
 
+  "commission.alreadyClaimed": "Already claimed, waiting for approval",
   "commission.claim.error.noActiveCycle": "No active cycle found.",
   "commission.claim.error.notCompleted": "Cycle not completed yet.",
   "commission.claim.error.noCommission": "No commission to claim.",

@@ -100,6 +100,7 @@
   "commModal.cancel": "取消",
   "commModal.confirm": "确认",
 
+  "commission.alreadyClaimed": "佣金已提交，等待批准中",
   "commission.claim.error.noActiveCycle": "当前没有活跃周期。",
   "commission.claim.error.notCompleted": "任务周期尚未完成。",
   "commission.claim.error.noCommission": "没有可领取的佣金。",

@@ -127,7 +127,7 @@ app.get('/company-name', async (req, res) => {
     )
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'company_name not found' })
+      return res.status(200).json({ success: false, message: 'company_name not found' })
     }
 
     res.json({ success: true, company_name: result.rows[0].value })
@@ -186,7 +186,7 @@ app.post('/register', async (req, res) => {
   const { username, password, securityPin, phone, email, gender, dob, referralCode, lang } = req.body;
 
   if (!username || !password || !securityPin)
-    return res.status(400).json({ status: false, message: t('error.missing_fields') });
+    return res.status(200).json({ status: false, message: t('error.missing_fields') });
 
   try {
     // Check if username exists
@@ -195,7 +195,7 @@ app.post('/register', async (req, res) => {
       [username]
     );
     if (check.rowCount > 0)
-      return res.status(409).json({ status: false, message: t('error.register.usernameTaken') });
+      return res.status(200).json({ status: false, message: t('error.register.usernameTaken') });
 
     let referred_by = null;
 
@@ -243,7 +243,7 @@ app.get('/me', verifyToken, async (req, res) => {
     `, [userId]);
 
     if (!userRes.rows.length)
-      return res.status(404).json({ status: false });
+      return res.status(500).json({ status: false, message: 'Server error' });
 
     const user = userRes.rows[0];
 
@@ -301,7 +301,7 @@ app.get('/me', verifyToken, async (req, res) => {
 
   } catch (err) {
     console.error('/me error:', err);
-    res.status(500).json({ status: false });
+    res.status(500).json({ status: false, message: 'Server error' });
   }
 });
 
@@ -443,13 +443,13 @@ app.post('/orders', verifyToken, async (req, res) => {
     // 7) 随机选 task（task 表必须有 product_price 与 blocker_price 字段）
     const taskRes = await client.query("SELECT id, product_name, product_description, image_url, product_price, blocker_price FROM tasks WHERE deleted_at IS NULL ORDER BY RANDOM() LIMIT 1");
     if (taskRes.rowCount === 0) {
-      return res.status(400).json({ status: false, message: 'No available tasks' });
+      return res.status(200).json({ status: false, message: 'No available tasks' });
     }
     const task = taskRes.rows[0];
 
     // 8) 金额直接取 task 中的价格；佣金以 cycle.commission_rate（已经为小数）计算
     const amount = parseFloat(isBlocker ? task.blocker_price : task.product_price);
-    if (Number.isNaN(amount)) return res.status(400).json({ status: false, message: 'Invalid task price' });
+    if (Number.isNaN(amount)) return res.status(200).json({ status: false, message: 'Invalid task price' });
 
     const commission = parseFloat((amount * parseFloat(cycle.commission_rate || vipCommissionRate)).toFixed(2));
 
@@ -499,7 +499,7 @@ app.post('/orders/:id/review', verifyToken, async (req, res) => {
     `, [orderId, userId]);
 
     if (!rows.length)
-      return res.status(404).json({ status: false, message: t('error.orderNotFound') });
+      return res.status(200).json({ status: false, message: t('error.orderNotFound') });
 
     const order = rows[0];
     const amount = parseFloat(order.amount);
@@ -507,11 +507,11 @@ app.post('/orders/:id/review', verifyToken, async (req, res) => {
 
     const balRes = await client.query(`SELECT balance FROM users WHERE id = $1`, [userId]);
     if (!balRes.rows.length)
-      return res.status(404).json({ status: false, message: t('error.userNotFound') });
+      return res.status(200).json({ status: false, message: t('error.userNotFound') });
 
     const balance = parseFloat(balRes.rows[0].balance);
     if (balance < amount)
-      return res.status(400).json({ status: false, message: t('error.insufficientBalance') });
+      return res.status(200).json({ status: false, message: t('error.insufficientBalance') });
 
     await client.query(`UPDATE users SET balance = balance - $1 WHERE id = $2`, [amount, userId]);
 
@@ -546,7 +546,7 @@ app.post('/update-profile', verifyToken, async (req, res) => {
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
 
   if (!securityPin)
-    return res.status(400).json({ status: false, message: t('error.pinRequired') });
+    return res.status(200).json({ status: false, message: t('error.pinRequired') });
 
   try {
     const result = await client.query(`
@@ -573,63 +573,54 @@ app.post('/claim-commission', verifyToken, async (req, res) => {
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
 
   try {
+    // 找到当前 active cycle
     const { rows } = await client.query(`
       SELECT id, cycle_size, orders FROM cycles 
-      WHERE user_id = $1 AND status = TRUE ORDER BY id DESC LIMIT 1
+      WHERE user_id = $1 AND status = TRUE 
+      ORDER BY id DESC LIMIT 1
     `, [userId]);
 
     if (!rows.length)
-      return res.status(400).json({ status: false, message: t('commission.claim.error.noActiveCycle') });
+      return res.status(200).json({ status: false, message: t('commission.claim.error.noActiveCycle') });
 
     const current = rows[0];
 
     if (current.orders.length < current.cycle_size)
-      return res.status(400).json({ status: false, message: t('commission.claim.error.notCompleted') });
+      return res.status(200).json({ status: false, message: t('commission.claim.error.notCompleted') });
 
+    // 检查是否已有未处理的 claim transaction
+    const pendingCheck = await client.query(`
+      SELECT 1 FROM transactions 
+      WHERE user_id = $1 AND type = 'COMMISSION' 
+        AND cycle_id = $2
+        AND status = 'PENDING'
+        AND deleted_at IS NULL
+      LIMIT 1
+    `, [userId, current.id]);
+
+    if (pendingCheck.rowCount > 0) {
+      return res.status(200).json({ status: true, message: t('commission.alreadyClaimed') });
+    }
+
+    // 算佣金
     const sumRes = await client.query(`
       SELECT SUM(commission)::numeric(10,2) AS total 
-      FROM orders WHERE cycle_id = $1 AND user_id = $2 AND deleted_at IS NULL
+      FROM orders 
+      WHERE cycle_id = $1 AND user_id = $2 AND deleted_at IS NULL
     `, [current.id, userId]);
 
     const commission = parseFloat(sumRes.rows[0].total || 0);
     if (commission <= 0)
-      return res.status(400).json({ status: false, message: t('commission.claim.error.noCommission') });
+      return res.status(200).json({ status: false, message: t('commission.claim.error.noCommission') });
 
-    const downlineRate = 0.25;
-    const ures = await client.query(`SELECT referred_by FROM users WHERE id = $1`, [userId]);
-    const referredBy = ures.rows[0] ? ures.rows[0].referred_by : null;
-
-    if (referredBy) {
-      const refererShare = parseFloat((commission * downlineRate).toFixed(2));
-      if (refererShare > 0) {
-        const remark = `Downline share from user ${userId} cycle ${current.id}`;
-        await client.query(`
-          INSERT INTO transactions (user_id, type, amount, status, remark)
-          VALUES ($1, 'COMMISSION', $2, 'PENDING', $3)
-        `, [referredBy, refererShare, remark]);
-      }
-    }
-
+    // 插入交易（PENDING）
     await client.query(`
-      INSERT INTO transactions (user_id, type, amount, status, remark) 
-      VALUES ($1, 'COMMISSION', $2, 'PENDING', $3)
-    `, [userId, commission, ``]);
+      INSERT INTO transactions (user_id, cycle_id, type, amount, status, remark)
+      VALUES ($1, $2, 'COMMISSION', $3, 'PENDING', 'Commission claim')
+    `, [userId, current.id, commission]);
 
-    await client.query(`UPDATE cycles SET status = FALSE, finished_at = NOW() WHERE id = $1`, [current.id]);
+    res.status(200).json({ status: true, message: t('commission.alreadyClaimed') });
 
-    const configRes = await client.query(`
-      SELECT key, value FROM config WHERE key IN ('cycle_size', 'blocker_indexes')
-    `);
-    const cfgMap = Object.fromEntries(configRes.rows.map(r => [r.key, r.value]));
-    const newSize = parseInt(cfgMap['cycle_size'], 10);
-    const blockerIndexes = cfgMap['blocker_indexes'].split(',').map(n => parseInt(n, 10));
-
-    await client.query(`
-      INSERT INTO cycles (user_id, cycle_size, blocker_indexes) 
-      VALUES ($1, $2, $3)
-    `, [userId, newSize, blockerIndexes]);
-
-    res.json({ status: true });
   } catch (err) {
     console.error('POST /claim-commission error:', err);
     res.status(500).json({ status: false, message: "Server Error" });
@@ -643,10 +634,10 @@ app.post('/withdraw', verifyToken, async (req, res) => {
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
 
   if (!amount || isNaN(amount) || amount <= 0)
-    return res.status(400).json({ status: false, message: t('error.invalidAmount') });
+    return res.status(200).json({ status: false, message: t('error.invalidAmount') });
 
   if (!/^\d{6}$/.test(pin))
-    return res.status(400).json({ status: false, message: t('error.invalidPin') });
+    return res.status(200).json({ status: false, message: t('error.invalidPin') });
 
   try {
     // 获取用户资料（包含 balance 和 security_pin）
@@ -656,18 +647,18 @@ app.post('/withdraw', verifyToken, async (req, res) => {
     `, [userId]);
 
     if (!userRes.rows.length)
-      return res.status(404).json({ status: false, message: t('error.userNotFound') });
+      return res.status(200).json({ status: false, message: t('error.userNotFound') });
 
     const user = userRes.rows[0];
     const balance = parseFloat(user.balance);
 
     // 验证 PIN 是否匹配
     if (user.security_pin !== pin)
-      return res.status(400).json({ status: false, message: t('error.incorrectPin') });
+      return res.status(200).json({ status: false, message: t('error.incorrectPin') });
 
     // 验证余额
     if (balance < amount)
-      return res.status(400).json({ status: false, message: t('error.insufficientBalance') });
+      return res.status(200).json({ status: false, message: t('error.insufficientBalance') });
 
     // 插入 transaction
     await client.query(`
@@ -717,7 +708,7 @@ app.get('/team', verifyToken, async (req, res) => {
     res.json({ status: true, data });
   } catch (err) {
     console.error('Error fetching user team:', err);
-    res.status(500).json({ status: false, error: 'Failed to fetch team' });
+    res.status(500).json({ status: false, message: 'Failed to fetch team' });
   }
 });
 
@@ -727,7 +718,7 @@ app.get('/users', verifyAdminToken, async (req, res) => {
     const result = await client.query(`
       SELECT id, username, password, security_pin, phone, email, gender,
         TO_CHAR(dob, 'YYYY-MM-DD') AS dob, balance, referral_code, referred_by,
-        status, user_type, vip_level, credit_score, last_login, created_at
+        status, can_withdraw, can_do_task, user_type, vip_level, credit_score, last_login, created_at
       FROM users
       WHERE user_type = 2 AND deleted_at IS NULL
       ORDER BY id ASC
@@ -763,23 +754,27 @@ app.get('/config', verifyAdminToken, async (req, res) => {
 
   } catch (err) {
     console.error('Error fetching config:', err);
-    res.status(500).json({ status: false });
+    res.status(500).json({ status: false, message:'Server Error' });
   }
 });
 
 app.post('/user/:id', verifyAdminToken, async (req, res) => {
   const { id } = req.params;
-  const { password, security_pin, phone, email, gender, dob } = req.body;
+  const { password, security_pin, phone, email, gender, dob, vip_level, credit_score } = req.body;
 
-  if (!id) return res.status(400).json({ message: 'Invalid ID' });
+  if (!id) return res.status(200).json({ status: false, message: 'Invalid ID' });
 
   try {
     const result = await client.query(
-      `UPDATE users SET password=$1, security_pin=$2, phone=$3, email=$4, gender=$5, dob=$6 WHERE id=$7`,
-      [password, security_pin, phone, email, gender, dob, id]
+      `UPDATE users 
+       SET password=$1, security_pin=$2, phone=$3, email=$4, gender=$5, dob=$6, vip_level=$7, credit_score=$8 
+       WHERE id=$9`,
+      [password, security_pin, phone, email, gender, dob, vip_level, credit_score, id]
     );
 
-    if (result.rowCount === 0) return res.status(404).json({ status: false, message: 'User not found' });
+    if (result.rowCount === 0) {
+      return res.status(200).json({ status: false, message: 'User not found' });
+    }
 
     res.json({ status: true, message: 'User updated' });
   } catch (err) {
@@ -790,24 +785,36 @@ app.post('/user/:id', verifyAdminToken, async (req, res) => {
 
 app.patch('/user/:id', verifyAdminToken, async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const allowedFields = ['status', 'can_withdraw', 'can_do_task'];
 
-  if (typeof status !== 'boolean') {
-    return res.status(400).json({ message: 'Invalid status value' });
+  // 找出 body 里允许更新的字段
+  const updates = Object.entries(req.body).filter(([key, val]) => 
+    allowedFields.includes(key) && typeof val === 'boolean'
+  );
+
+  if (updates.length === 0) {
+    return res.status(200).json({ status: false, message: 'No valid fields to update' });
   }
 
   try {
+    // 动态拼 update 语句
+    const setClause = updates.map(([key], i) => `${key}=$${i + 1}`).join(', ');
+    const values = updates.map(([_, val]) => val);
+    values.push(id);
+
     const result = await client.query(
-      'UPDATE users SET status=$1 WHERE id=$2',
-      [status, id]
+      `UPDATE users SET ${setClause} WHERE id=$${values.length}`,
+      values
     );
 
-    if (result.rowCount === 0) return res.status(404).json({ message: 'User not found' });
+    if (result.rowCount === 0) {
+      return res.status(200).json({ status: false, message: t('error.userNotFound') });
+    }
 
-    res.json({ message: 'Status updated' });
+    res.json({ message: 'User updated' });
   } catch (err) {
-    console.error('Update status error:', err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Update user error:', err);
+    res.status(500).json({ status: false, message: 'Server error' });
   }
 });
 
@@ -818,7 +825,7 @@ app.get('/tasks', verifyAdminToken, async (req, res) => {
     );
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: 'Fetch tasks failed' });
+    res.status(500).json({ status: false, message: 'Fetch tasks failed' });
   }
 });
 
@@ -828,10 +835,10 @@ app.get('/tasks/:id', verifyAdminToken, async (req, res) => {
       'SELECT * FROM tasks WHERE id = $1 AND deleted_at IS NULL',
       [req.params.id]
     );
-    if (!result.rows.length) return res.status(404).json({ error: 'Task not found' });
+    if (!result.rows.length) return res.status(200).json({ status: false, message: 'Task not found' });
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: 'Fetch task failed' });
+    res.status(500).json({ status: false, message: 'Fetch task failed' });
   }
 });
 
@@ -847,7 +854,7 @@ app.post('/tasks', verifyAdminToken, async (req, res) => {
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Create task failed' });
+    res.status(500).json({ status: false, message: 'Create task failed' });
   }
 });
 
@@ -866,11 +873,11 @@ app.put('/tasks/:id', verifyAdminToken, async (req, res) => {
        RETURNING *`,
       [productName, imageUrl, taskDescription, productPrice, blockerPrice, id]
     );
-    if (!result.rows.length) return res.status(404).json({ error: 'Task not found' });
+    if (!result.rows.length) return res.status(200).json({ status: false, message: 'Task not found' });
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Update failed' });
+    res.status(500).json({ status: false, message: 'Update failed' });
   }
 });
 
@@ -880,10 +887,10 @@ app.delete('/tasks/:id', verifyAdminToken, async (req, res) => {
       `UPDATE tasks SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id`,
       [req.params.id]
     );
-    if (!result.rows.length) return res.status(404).json({ error: 'Task not found or already deleted' });
+    if (!result.rows.length) return res.status(200).json({ status: false, message: 'Task not found or already deleted' });
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: 'Delete failed' });
+    res.status(500).json({ status: false, message: 'Delete failed' });
   }
 });
 
@@ -899,7 +906,7 @@ app.put('/orders/:id', verifyAdminToken, async (req, res) => {
   `, [amount, (amount * commission_rate / 100), id]);
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ status: false, error: 'Order not found' });
+      return res.status(200).json({ status: false, error: 'Order not found' });
     }
 
     const order = result.rows[0];
@@ -923,11 +930,41 @@ app.put('/orders/:id', verifyAdminToken, async (req, res) => {
   }
 });
 
+app.delete('/orders/:id', verifyAdminToken, async (req, res) => {
+  const orderId = parseInt(req.params.id, 10);
+
+  try {
+    // soft delete
+    const upd = await client.query(`
+      UPDATE orders
+      SET deleted_at = NOW()
+      WHERE id = $1
+      RETURNING cycle_id
+    `, [orderId]);
+
+    if (!upd.rowCount) return res.status(404).json({ status: false, message: 'Order not found' });
+
+    const cycleId = upd.rows[0].cycle_id;
+
+    // 从 cycle.orders 里移除
+    await client.query(`
+      UPDATE cycles
+      SET orders = array_remove(orders, $1)
+      WHERE id = $2
+    `, [orderId, cycleId]);
+
+    res.json({ status: true });
+  } catch (err) {
+    console.error("DELETE /orders/:id error:", err);
+    res.status(500).json({ status: false, message: 'Server error' });
+  }
+});
+
 app.get('/cycles', verifyAdminToken, async (req, res) => {
   try {
     const { userId } = req.query;
     if (!userId) {
-      return res.status(400).json({ status: false, error: 'Missing userId' });
+      return res.status(200).json({ status: false, error: 'Missing userId' });
     }
 
     const cyclesResult = await client.query(`
@@ -958,7 +995,7 @@ app.get('/cycles', verifyAdminToken, async (req, res) => {
       WHERE o.cycle_id = $1
       ORDER BY 
         CASE WHEN o.completed_at IS NULL THEN 1 ELSE 0 END,
-        o.completed_at ASC
+        o.created_at ASC
     `, [activeCycle.id]);
 
     activeCycle.orders = ordersResult.rows;
@@ -972,9 +1009,60 @@ app.get('/cycles', verifyAdminToken, async (req, res) => {
   }
 });
 
+app.post('/cycles/:id/orders', verifyAdminToken, async (req, res) => {
+  const cycleId = parseInt(req.params.id, 10);
+  const { productId } = req.body;
+
+  if (!productId) return res.status(400).json({ status: false, message: 'productId required' });
+
+  try {
+    // 查 cycle
+    const cRes = await client.query(`
+      SELECT user_id FROM cycles WHERE id=$1 AND deleted_at IS NULL
+    `, [cycleId]);
+    if (!cRes.rowCount) return res.status(404).json({ status: false, message: 'Cycle not found' });
+    const userId = cRes.rows[0].user_id;
+
+    // 查 product
+    const pRes = await client.query(`
+      SELECT product_price FROM tasks WHERE id=$1 AND deleted_at IS NULL
+    `, [productId]);
+    if (!pRes.rowCount) return res.status(404).json({ status: false, message: 'Product not found' });
+    const amount = parseFloat(pRes.rows[0].product_price);
+
+    // 查 config 取 commission_rate
+    const cfgRes = await client.query(`
+      SELECT value FROM config WHERE key='commission_rate'
+    `);
+    const commissionRate = parseFloat(cfgRes.rows[0]?.value || 0);
+    const commission = parseFloat((amount * commissionRate).toFixed(2));
+
+    // 插入 order
+    const oRes = await client.query(`
+      INSERT INTO orders (user_id, cycle_id, task_id, amount, commission)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id
+    `, [userId, cycleId, productId, amount, commission]);
+
+    const orderId = oRes.rows[0].id;
+
+    // 把 order id push 进 cycle.orders
+    await client.query(`
+      UPDATE cycles
+      SET orders = array_append(orders, $1)
+      WHERE id = $2
+    `, [orderId, cycleId]);
+
+    res.json({ status: true, orderId });
+  } catch (err) {
+    console.error("POST /cycles/:id/orders error:", err);
+    res.status(500).json({ status: false, message: 'Server error' });
+  }
+});
+
 app.post('/cycle/reset', verifyAdminToken, async (req, res) => {
   const userId = req.body.userId;
-  if (!userId) return res.status(400).json({ status: false, error: 'Missing userId' });
+  if (!userId) return res.status(200).json({ status: false, error: 'Missing userId' });
 
   try {
     // 先读取当前 active cycle 的设置（取最新一笔 active）
@@ -1093,65 +1181,88 @@ app.patch('/transactions/:id', verifyAdminToken, async (req, res) => {
   const newStat = req.body.status;
 
   if (!['APPROVED', 'REJECTED'].includes(newStat)) {
-    return res.status(400).json({ status: false, message: 'Invalid status' });
+    return res.status(200).json({ status: false, message: 'Invalid status' });
   }
 
   try {
-    await client.query('BEGIN');
-
-    // 1) 更新状态并取出交易详情
+    // 更新交易状态并取详情
     const upd = await client.query(`
       UPDATE transactions
       SET status = $1
       WHERE id = $2 AND deleted_at IS NULL
-      RETURNING id, user_id, amount, type
+      RETURNING id, user_id, amount, type, cycle_id
     `, [newStat, txId]);
 
     if (!upd.rowCount) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ status: false, message: 'Transaction not found' });
+      return res.status(200).json({ status: false, message: 'Transaction not found' });
     }
 
-    const { user_id, amount, type } = upd.rows[0];
+    const { user_id, amount, type, cycle_id } = upd.rows[0];
 
-    // 2) 若 APPROVED，处理入账或出账
+    // 如果是 APPROVED
     if (newStat === 'APPROVED') {
       const plusTypes = ['DEPOSIT', 'COMMISSION'];
       const delta = plusTypes.includes(type.toUpperCase()) ? amount : -amount;
 
-      const ub = await client.query(`
+      // 更新余额
+      await client.query(`
         UPDATE users
         SET balance = balance + $1
         WHERE id = $2
-        RETURNING balance
       `, [delta, user_id]);
 
-      if (!ub.rowCount) {
-        await client.query('ROLLBACK');
-        return res.status(500).json({ status: false, message: 'Failed to update user balance' });
+      // 如果是佣金申请，处理 cycle 结束 & 开新 cycle
+      if (type.toUpperCase() === 'COMMISSION') {
+        // 关闭旧 cycle
+        await client.query(`
+          UPDATE cycles 
+          SET status = FALSE, finished_at = NOW() 
+          WHERE id = $1
+        `, [cycle_id]);
+
+        // 处理 downline 分佣
+        const downlineRate = 0.25;
+        const ures = await client.query(`SELECT referred_by FROM users WHERE id = $1`, [user_id]);
+        const referredBy = ures.rows[0] ? ures.rows[0].referred_by : null;
+
+        if (referredBy) {
+          const refererShare = parseFloat((amount * downlineRate).toFixed(2));
+          if (refererShare > 0) {
+            const remark = `Downline share from user ${user_id} cycle ${cycle_id}`;
+            await client.query(`
+              INSERT INTO transactions (user_id, type, amount, status, remark)
+              VALUES ($1, 'COMMISSION', $2, 'PENDING', $3)
+            `, [referredBy, refererShare, remark]);
+          }
+        }
+
+        // 开新 cycle
+        const configRes = await client.query(`
+          SELECT key, value FROM config WHERE key IN ('cycle_size', 'blocker_indexes')
+        `);
+        const cfgMap = Object.fromEntries(configRes.rows.map(r => [r.key, r.value]));
+        const newSize = parseInt(cfgMap['cycle_size'], 10);
+        const blockerIndexes = cfgMap['blocker_indexes'].split(',').map(n => parseInt(n, 10));
+
+        await client.query(`
+          INSERT INTO cycles (user_id, cycle_size, blocker_indexes) 
+          VALUES ($1, $2, $3)
+        `, [user_id, newSize, blockerIndexes]);
       }
     }
 
-    // 3) 若是提现 且被拒绝，返还金额
+    // 如果是提现 + 被拒绝 => 返还金额
     if (type.toUpperCase() === 'WITHDRAWAL' && newStat === 'REJECTED') {
-      const refund = await client.query(`
+      await client.query(`
         UPDATE users
         SET balance = balance + $1
         WHERE id = $2
-        RETURNING balance
       `, [Math.abs(amount), user_id]);
-
-      if (!refund.rowCount) {
-        await client.query('ROLLBACK');
-        return res.status(500).json({ status: false, message: 'Failed to refund user' });
-      }
     }
 
-    await client.query('COMMIT');
     res.json({ status: true, data: { id: txId, status: newStat } });
 
   } catch (err) {
-    await client.query('ROLLBACK');
     console.error(`PATCH /transactions/${txId}`, err);
     res.status(500).json({ status: false, message: 'Server error' });
   }
@@ -1165,7 +1276,7 @@ app.delete('/transactions/:id', verifyAdminToken, async (req, res) => {
       WHERE id = $1 AND deleted_at IS NULL
       RETURNING id
     `, [req.params.id]);
-    if (!rows.length) return res.status(404).json({ status: false, message: 'Not found or already deleted' });
+    if (!rows.length) return res.status(200).json({ status: false, message: 'Not found or already deleted' });
     res.json({ status: true, data: { id: rows[0].id } });
   } catch (err) {
     console.error(`DELETE /transactions/${req.params.id}`, err);
@@ -1202,7 +1313,7 @@ app.get('/team/:id', verifyAdminToken, async (req, res) => {
     res.json({ status: true, data });
   } catch (err) {
     console.error('Error fetching admin team:', err);
-    res.status(500).json({ status: false, error: 'Failed to fetch team' });
+    res.status(500).json({ status: false, message: 'Failed to fetch team' });
   }
 });
 
@@ -1212,7 +1323,40 @@ app.get('/config', verifyAdminToken, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('Error fetching config:', err);
-    res.status(500).json({ error: 'Failed to fetch config' });
+    res.status(500).json({ status:false, message: 'Failed to fetch config' });
+  }
+});
+
+app.get('/wallet/search', verifyAdminToken, async (req, res) => {
+  const { wallet, username } = req.query;
+
+  if (!wallet && !username) 
+    return res.json({ status: false, message: 'Missing search query' });
+
+  let where = '';
+  let value = '';
+  if (wallet) {
+    where = 'phone ILIKE $1';
+    value = `%${wallet}%`;
+  } else if (username) {
+    where = 'username ILIKE $1';
+    value = `%${username}%`;
+  }
+
+  try {
+    const { rows } = await client.query(
+      `SELECT id, username, phone, email
+       FROM users
+       WHERE ${where} AND deleted_at IS NULL`,
+      [value]
+    );
+
+    if (!rows.length) return res.json({ status: false, data: [] });
+
+    res.json({ status: true, data: rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: false, message: 'Server error' });
   }
 });
 
