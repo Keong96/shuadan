@@ -212,7 +212,7 @@
     }
 
     const decoded_token = jwt_decode(token);
-    if (decoded_token.exp < Math.floor(Date.now()/1000) || decoded_token.userType !== 0)
+    if (decoded_token.exp < Math.floor(Date.now()/1000) || (decoded_token.userType !== 0 || decoded_token.userType !== 1))
     {
       window.stop();
       localStorage.removeItem("token");
