@@ -95,7 +95,7 @@
   "commModal.title": "Claim Commission",
   "commModal.message": "You are about to claim commission:",
   "commModal.completed": "You have completed your current cycle.",
-  "commModal.progress": "Task Progress: 20 of 20",
+  "commModal.progress": "Task Progress: ",
   "commModal.amount": "Total Commission:",
   "commModal.cancel": "Cancel",
   "commModal.confirm": "Confirm",

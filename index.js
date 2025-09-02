@@ -15,7 +15,9 @@ app.use(express.static('public', { index: false }));
 
 const languages = {
   en: JSON.parse(fs.readFileSync(path.join(__dirname, 'public/lang/en.json'), 'utf8')),
-  zh: JSON.parse(fs.readFileSync(path.join(__dirname, 'public/lang/zh.json'), 'utf8'))
+  zh: JSON.parse(fs.readFileSync(path.join(__dirname, 'public/lang/zh.json'), 'utf8')),
+  de: JSON.parse(fs.readFileSync(path.join(__dirname, 'public/lang/de.json'), 'utf8')),
+  fr: JSON.parse(fs.readFileSync(path.join(__dirname, 'public/lang/fr.json'), 'utf8'))
 };
 
 function t(lang = 'en', key) {

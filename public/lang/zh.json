@@ -95,7 +95,7 @@
   "commModal.title": "领取佣金",
   "commModal.message": "你即将领取以下佣金：",
   "commModal.completed": "你已完成当前任务周期。",
-  "commModal.progress": "任务进度：20 / 20",
+  "commModal.progress": "任务进度：",
   "commModal.amount": "总佣金：",
   "commModal.cancel": "取消",
   "commModal.confirm": "确认",

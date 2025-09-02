@@ -10,7 +10,28 @@
   <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="localization.js" defer></script>
-  <script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="a8cb42f7-382a-4883-916b-b526650af674";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script>
+
+  <script type="text/javascript">
+    window.$crisp = [];
+    window.CRISP_WEBSITE_ID = "a8cb42f7-382a-4883-916b-b526650af674";
+    window.$crisp.push(["on", "session:loaded", function() {
+      const style = document.createElement("style");
+      style.innerHTML = `
+        #crisp-chatbox > div > a {
+          bottom: 65px !important;
+          right: 20px !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }]);
+    (function() {
+      var d = document, s = d.createElement("script");
+      s.src = "https://client.crisp.chat/l.js";
+      s.async = 1;
+      d.getElementsByTagName("head")[0].appendChild(s);
+    })();
+  </script>
+
   <style>
     * {
       box-sizing:border-box;
@@ -20,9 +41,9 @@
     html, body {
       height:100%;
       font-family:sans-serif;
-      /* background: linear-gradient(90deg,#eef2f5 0%,#cfe9ff 100%); */
+      background: linear-gradient(90deg,#eef2f5 0%,#cfe9ff 100%);
       padding-top:20px;
-      background: url('img/background.jpg') repeat;
+      /* background: url('img/background.jpg') repeat; */
     }
     .tab, .card {
       width:85%;
@@ -252,7 +273,7 @@
     <!-- Section 2: Funds -->
     <section id="section-funds" class="d-none px-2">
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5 class="mb-3 px-3 text-white">
+        <h5 class="mb-3 px-3 text-dark">
           <i class="bi bi-list-columns-reverse me-1"></i>
           <span data-i18n="funds.transaction.title">Transaction History</span>
         </h5>
@@ -343,7 +364,7 @@
 
     <!-- Section 4: Records -->
     <section id="section-records" class="d-none">
-      <h5 class="mb-3 px-3 text-white">
+      <h5 class="mb-3 px-3 text-dark">
         <i class="bi bi-clock-history me-2"></i>
         <span data-i18n="records.title">Task Records</span>
       </h5>
@@ -460,11 +481,11 @@
 
   <!-- Bottom Navigation -->
   <nav class="bottom-nav">
-    <button onclick="switchSection('home')" data-i18n="nav.home"><i class="bi bi-house-door-fill"></i><br>Home</button>
-    <button onclick="switchSection('funds')" data-i18n="nav.funds"><i class="bi bi-wallet2"></i><br>Funds</button>
-    <button onclick="switchSection('tasks')" data-i18n="nav.tasks"><i class="bi bi-list-check"></i><br>Tasks</button>
-    <button onclick="switchSection('records')" data-i18n="nav.records"><i class="bi bi-clock-history"></i><br>Records</button>
-    <button onclick="switchSection('profile')" data-i18n="nav.profile"><i class="bi bi-person-circle"></i><br>Profile</button>
+    <button onclick="switchSection('home')"><i class="bi bi-house-door-fill"></i><br><span data-i18n="nav.home">Home</span></button>
+    <button onclick="switchSection('funds')"><i class="bi bi-wallet2"></i><br><span data-i18n="nav.funds">Funds</span></button>
+    <button onclick="switchSection('tasks')"><i class="bi bi-list-check"></i><br><span data-i18n="nav.tasks">Tasks</span></button>
+    <button onclick="switchSection('records')"><i class="bi bi-clock-history"></i><br><span data-i18n="nav.records">Records</span></button>
+    <button onclick="switchSection('profile')"><i class="bi bi-person-circle"></i><br><span data-i18n="nav.profile">Profile</span></button>
   </nav>
 
   <!-- Withdraw Modal -->
@@ -778,10 +799,10 @@
         </div>
         <div class="modal-body">
           <ul class="list-group">
-            <li class="list-group-item language-option" data-lang="en" data-i18n="modal.language.english">English</li>
-            <li class="list-group-item language-option" data-lang="zh" data-i18n="modal.language.chinese">中文</li>
-            <li class="list-group-item language-option" data-lang="es" data-i18n="modal.language.spanish">Español</li>
-            <li class="list-group-item language-option" data-lang="fr" data-i18n="modal.language.french">Français</li>
+            <li class="list-group-item language-option" data-lang="en">English</li>
+            <li class="list-group-item language-option" data-lang="zh">中文</li>
+            <li class="list-group-item language-option" data-lang="de">Deutsch</li>
+            <li class="list-group-item language-option" data-lang="fr">Français</li>
           </ul>
         </div>
       </div>
@@ -789,6 +810,21 @@
   </div>
 
   <script>
+    function moveCrisp() {
+      const crispBtn = document.querySelector(".crisp-client .cc-1m2mf");
+      if (crispBtn) {
+        crispBtn.style.bottom = "60px";
+        crispBtn.style.right = "14px";
+        crispBtn.style.zIndex = "999999";
+      }
+    }
+
+    // 初始执行
+    moveCrisp();
+
+    const observer = new MutationObserver(moveCrisp);
+    observer.observe(document.body, { childList: true, subtree: true });
+  
     const token = localStorage.getItem("token");
     if(!token)
     {
@@ -1394,14 +1430,26 @@
         const selected = item.textContent.trim();
         let lang = 'en';
 
-        if (selected === '中文') lang = 'zh';
-        else if (selected === 'English') lang = 'en';
-        // add other languages later
+        switch (selected) {
+          case '中文':
+            lang = 'zh';
+            break;
+          case 'English':
+            lang = 'en';
+            break;
+          case 'Deutsch':
+            lang = 'de';
+            break;
+          case 'Français':
+            lang = 'fr';
+            break;
+          default:
+            lang = 'en';
+        }
 
         localStorage.setItem('lang', lang);
         loadLanguage(lang);
 
-        // 隐藏 modal
         const modal = bootstrap.Modal.getInstance(document.getElementById('languageModal'));
         modal.hide();
       });
