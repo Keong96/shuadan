@@ -29,6 +29,23 @@
   "register.have_account": "已有账户？",
   "register.login_now": "立即登录",
 
+  "eula.section1.title": "1. 许可授予",
+  "eula.section1.text": "通过注册并使用本应用程序，您获得一项有限的、不可转让的、非排他性的许可，以访问和使用所提供的服务。",
+  "eula.section2.title": "2. 限制",
+  "eula.section2.text": "未经事先书面同意，您不得复制、修改、分发、出售或出租本应用程序的任何部分。",
+  "eula.section3.title": "3. 用户责任",
+  "eula.section3.text": "您同意不滥用本应用程序，并在使用服务时遵守所有适用的法律。",
+  "eula.section4.title": "4. 终止",
+  "eula.section4.text": "违反本协议可能导致您的账户被暂停或终止。",
+  "eula.section5.title": "5. 协议变更",
+  "eula.section5.text": "我们保留随时更新或修改本协议的权利。继续使用本应用程序即表示您接受更新后的条款。",
+
+  "eula.title": "最终用户许可协议",
+  "eula.close": "关闭",
+  "eula.accept": "同意",
+  "register.eula.notice": "注册即表示您已同意",
+  "register.eula.link": "最终用户许可协议",
+
   "footer.rights": "版权所有",
 
   "nav.home": "首页",

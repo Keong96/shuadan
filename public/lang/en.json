@@ -29,6 +29,18 @@
   "register.have_account": "Already have an account?",
   "register.login_now": "Login Now",
 
+  "eula.section1.title": "1. License Grant",
+  "eula.section1.text": "By registering and using this application, you are granted a limited, non-transferable, non-exclusive license to access and use the services provided.",
+  "eula.section2.title": "2. Restrictions",
+  "eula.section2.text": "You may not copy, modify, distribute, sell, or lease any part of the application without prior written consent.",
+  "eula.section3.title": "3. User Responsibilities",
+  "eula.section3.text": "You agree not to misuse the application and comply with all applicable laws while using the services.",
+  "eula.section4.title": "4. Termination",
+  "eula.section4.text": "Violation of this agreement may result in suspension or termination of your account.",
+  "eula.section5.title": "5. Changes to Agreement",
+  "eula.section5.text": "We reserve the right to update or modify this Agreement at any time. Continued use of the application constitutes acceptance of the updated terms.",
+
+  
   "footer.rights": "All rights reserved",
 
   "nav.home": "Home",

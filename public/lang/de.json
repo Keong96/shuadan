@@ -29,6 +29,23 @@
   "register.have_account": "Bereits ein Konto?",
   "register.login_now": "Jetzt anmelden",
 
+  "eula.section1.title": "1. Lizenzgewährung",
+  "eula.section1.text": "Durch die Registrierung und Nutzung dieser Anwendung erhalten Sie eine eingeschränkte, nicht übertragbare, nicht-exklusive Lizenz zum Zugriff auf die bereitgestellten Dienste und deren Nutzung.",
+  "eula.section2.title": "2. Einschränkungen",
+  "eula.section2.text": "Ohne vorherige schriftliche Zustimmung dürfen Sie keinen Teil der Anwendung kopieren, ändern, verbreiten, verkaufen oder vermieten.",
+  "eula.section3.title": "3. Pflichten des Nutzers",
+  "eula.section3.text": "Sie verpflichten sich, die Anwendung nicht missbräuchlich zu verwenden und alle geltenden Gesetze bei der Nutzung der Dienste einzuhalten.",
+  "eula.section4.title": "4. Kündigung",
+  "eula.section4.text": "Ein Verstoß gegen diese Vereinbarung kann zur Sperrung oder Beendigung Ihres Kontos führen.",
+  "eula.section5.title": "5. Änderungen der Vereinbarung",
+  "eula.section5.text": "Wir behalten uns das Recht vor, diese Vereinbarung jederzeit zu aktualisieren oder zu ändern. Die fortgesetzte Nutzung der Anwendung gilt als Zustimmung zu den aktualisierten Bedingungen.",
+
+  "eula.title": "Endbenutzer-Lizenzvereinbarung",
+  "eula.close": "Schließen",
+  "eula.accept": "Akzeptieren",
+  "register.eula.notice": "Mit der Registrierung stimmen Sie automatisch der ",
+  "register.eula.link": "Endbenutzer-Lizenzvereinbarung zu",
+
   "footer.rights": "Alle Rechte vorbehalten",
 
   "nav.home": "Startseite",

@@ -145,7 +145,7 @@
       <div id="languageSelectTrigger" class="custom-select-trigger">Choose Language</div>
       <ul id="languageSelectOptions" class="custom-select-options">
         <li data-value="en">English</li>
-        <li data-value="zh">中文</li>
+        <!-- <li data-value="zh">中文</li> -->
         <li data-value="de">Deutsch</li>
         <li data-value="fr">Français</li>
       </ul>
@@ -250,11 +250,69 @@
       </div>
     </div>
 
+    <!-- EULA -->
+    <div class="mb-3 text-muted small text-center" style="max-width: 360px; width: 100%;">
+      <span data-i18n="register.eula.notice">
+        By registering, you automatically agree to the
+      </span>
+      <a href="#" data-bs-toggle="modal" data-bs-target="#eulaModal" data-i18n="register.eula.link">
+        End User License Agreement
+      </a>
+    </div>
+
     <button class="btn-login" data-i18n="register.button" onclick="register()"></button>
     <div><span data-i18n="register.have_account"></span> <a href="#" id="switchToLogin" data-i18n="register.login_now">Login Now</a></div>
   </div>
 
+  <div class="modal fade" id="eulaModal" tabindex="-1" aria-labelledby="eulaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="eulaModalLabel" data-i18n="eula.title">End User License Agreement</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <h6 data-i18n="eula.section1.title">1. License Grant</h6>
+          <p data-i18n="eula.section1.text">
+            By registering and using this application, you are granted a limited, non-transferable,
+            non-exclusive license to access and use the services provided.
+          </p>
+
+          <h6 data-i18n="eula.section2.title">2. Restrictions</h6>
+          <p data-i18n="eula.section2.text">
+            You may not copy, modify, distribute, sell, or lease any part of the application without 
+            prior written consent.
+          </p>
+
+          <h6 data-i18n="eula.section3.title">3. User Responsibilities</h6>
+          <p data-i18n="eula.section3.text">
+            You agree not to misuse the application and comply with all applicable laws 
+            while using the services.
+          </p>
+
+          <h6 data-i18n="eula.section4.title">4. Termination</h6>
+          <p data-i18n="eula.section4.text">
+            Violation of this agreement may result in suspension or termination of your account.
+          </p>
+
+          <h6 data-i18n="eula.section5.title">5. Changes to Agreement</h6>
+          <p data-i18n="eula.section5.text">
+            We reserve the right to update or modify this Agreement at any time. 
+            Continued use of the application constitutes acceptance of the updated terms.
+          </p>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="eula.close">Close</button>
+          <button type="button" class="btn btn-primary" id="acceptEulaBtn" data-i18n="eula.accept">Accept</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <footer>&copy; 2025 <span>Default Company</span>. <span data-i18n="footer.rights">All Rights Reserved.</span></footer>
+
 </body>
 <script>
 

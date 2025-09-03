@@ -29,6 +29,23 @@
   "register.have_account": "Vous avez déjà un compte ?",
   "register.login_now": "Se connecter maintenant",
 
+  "eula.section1.title": "1. Octroi de licence",
+  "eula.section1.text": "En vous inscrivant et en utilisant cette application, vous bénéficiez d'une licence limitée, non transférable et non exclusive pour accéder aux services fournis et les utiliser.",
+  "eula.section2.title": "2. Restrictions",
+  "eula.section2.text": "Vous ne pouvez pas copier, modifier, distribuer, vendre ou louer une partie de l'application sans autorisation écrite préalable.",
+  "eula.section3.title": "3. Responsabilités de l'utilisateur",
+  "eula.section3.text": "Vous acceptez de ne pas abuser de l'application et de respecter toutes les lois applicables lors de l'utilisation des services.",
+  "eula.section4.title": "4. Résiliation",
+  "eula.section4.text": "Toute violation du présent accord peut entraîner la suspension ou la résiliation de votre compte.",
+  "eula.section5.title": "5. Modifications de l'accord",
+  "eula.section5.text": "Nous nous réservons le droit de mettre à jour ou de modifier le présent accord à tout moment. L'utilisation continue de l'application vaut acceptation des conditions mises à jour.",
+
+  "eula.title": "Contrat de licence d’utilisateur final",
+  "eula.close": "Fermer",
+  "eula.accept": "Accepter",
+  "register.eula.notice": "En vous inscrivant, vous acceptez automatiquement les ",
+  "register.eula.link": "Conditions de licence de l’utilisateur final",
+
   "footer.rights": "Tous droits réservés",
 
   "nav.home": "Accueil",
