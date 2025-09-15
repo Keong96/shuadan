@@ -109,6 +109,9 @@
   "tasks.notice.support": "Pour toute question, veuillez contacter l’équipe de support.",
   "tasks.claimComm": "Réclamer la commission",
 
+  "proceed.tnc.notice": "En continuant, vous acceptez les",
+  "proceed.tnc.link": "Conditions générales",
+
   "commModal.title": "Réclamer la commission",
   "commModal.message": "Vous êtes sur le point de réclamer la commission suivante :",
   "commModal.completed": "Vous avez terminé le cycle actuel.",
@@ -145,6 +148,9 @@
   "profile.withdrawInfo": "Informations de retrait",
   "profile.language": "Langue",
   "profile.signOut": "Déconnexion",
+  "profile.checkInNow": "Se connecter maintenant",
+  "profile.checkInHint": "Connectez-vous chaque jour pour recevoir votre récompense.",
+  "profile.dailyCheckIn": "Connexion quotidienne",
 
   "modal.task.title": "Soumettre la tâche",
   "modal.task.productName": "Nom du produit",
@@ -207,5 +213,9 @@
   "error.pinRequired": "Veuillez entrer le code PIN.",
   "error.invalidPin": "Code PIN invalide.",
   "error.invalidAmount": "Veuillez entrer un montant valide.",
-  "error.orderNotFound": "Commande introuvable."
+  "error.orderNotFound": "Commande introuvable.",
+
+  "tnc.title": "Conditions Générales",
+  "tnc.close": "Fermer",
+  "tnc.content": "<h6>1. Exigences de solde du compte</h6><p>1.1 Les utilisateurs doivent maintenir un solde minimum de 50 USDT pour activer leur compte.</p><p>1.2 Après avoir terminé toutes les tâches, les utilisateurs peuvent demander un retrait, mais au moins 100 USDT doivent rester sur le compte pour continuer les tâches quotidiennes. Les retraits ne sont réinitialisés qu’une fois les fonds crédités.</p><p>1.3 Les utilisateurs peuvent inviter des amis à rejoindre la plateforme STEAM. Chaque tâche complétée par un invité rapporte 0,25 USDT à l’invitant.</p><h6>2. Sécurité du compte</h6><p>2.1 Les utilisateurs ne doivent pas partager leurs mots de passe. La plateforme n’est pas responsable des pertes dues à des fuites.</p><p>2.2 En cas d’oubli, contacter le service client.</p><p>2.3 Les utilisateurs et commerçants sont liés par un accord de confidentialité.</p><p>2.4 Toutes les tâches sont effectuées par de vrais utilisateurs.</p><p>2.5 Les utilisateurs doivent maintenir la crédibilité et l’activité de leur compte.</p><h6>3. Sécurité des fonds</h6><p>3.1 Tous les fonds sont stockés en toute sécurité et utilisables pour les tâches ou retraits.</p><p>3.2 Toutes les transactions passent par le système TFC.</p><p>3.3 Dépasser le seuil entraîne une commission de 5%–10%.</p><p>3.4 En cas de perte, la plateforme compense intégralement.</p><p>3.5 Les dépôts de plus de 500 USDT reçoivent un bonus de 20%.</p><h6>4. Optimisation des tâches</h6><p>4.1 Les différents niveaux donnent droit à des commissions et bonus.</p><p>4.2 Niveaux : Bronze, Argent, Or, Platine, Diamant.</p><p>4.3 Après chaque tâche, commission et capital sont restitués.</p><p>4.4 Les tâches sont attribuées selon le solde.</p><p>4.5 Aucune tâche ne peut être annulée ou ignorée.</p><p>4.6 Montants et commissions évoluent avec le solde.</p><p>4.7 Les combinaisons de tâches sont attribuées aléatoirement.</p><h6>5. Dépôts & Vérification du portefeuille</h6><p>5.1 Les comptes peuvent être redémarrés à tout moment.</p><p>5.2 Des fonds supplémentaires doivent être ajoutés si nécessaire.</p><p>5.3 Vérifier l’adresse auprès du support avant tout dépôt.</p><p>5.4 La plateforme n’est pas responsable des erreurs d’adresse.</p><h6>6. Développeurs de jeux STEAM</h6><p>6.1 Les commandes sont rafraîchies chaque minute. Les tâches doivent être complétées sous 24h.</p><h6>7. Dispositions supplémentaires</h6><p>7.1 En cas d’oubli du mot de passe, un dépôt de 500 USD est requis.</p><p>7.2 Dépasser les limites nécessite des frais, remboursés après paiement.</p>"
 }

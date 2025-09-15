@@ -17,7 +17,7 @@
     window.$crisp.push(["on", "session:loaded", function() {
       const style = document.createElement("style");
       style.innerHTML = `
-        #crisp-chatbox > div > a {
+        #crisp-chatbox-button {
           bottom: 65px !important;
           right: 20px !important;
         }
@@ -356,8 +356,12 @@
         <i class="bi bi-bell-fill text-primary fs-4 me-2"></i>
         <div>
           <div class="fw-bold" data-i18n="tasks.notice.title">Important Notice</div>
-          <div data-i18n="tasks.notice.hours">Business hour 10:00 AM – 10:00 PM</div>
+          <div data-i18n="tasks.notice.hours">Business hour 7:00 AM – 12:30 AM</div>
           <small class="text-muted" data-i18n="tasks.notice.support">For inquiries about applicants, please refer to the support team.</small>
+          <br>
+          <br>
+          <small data-i18n="proceed.tnc.notice">By proceeding, you agree to the</small>
+          <small><a href="#" data-bs-toggle="modal" data-bs-target="#tncModal" data-i18n="proceed.tnc.link">Terms & Conditions</a></small>
         </div>
       </div>
     </section>
@@ -375,9 +379,13 @@
       <!-- Profile Card -->
       <div class="card mb-3">
         <div class="card-body text-center">
-          <i class="bi bi-person-circle mb-2" style="font-size: 60px;"></i>
-          <h6 class="fw-bold">技术账号（请勿删除）51</h6>
-          <div class="badge bg-warning text-dark mb-2">VIP 2</div>
+          <label for="profileUpload" style="cursor: pointer;">
+            <img id="profileImage" src="img/default_user.png" class="rounded-circle mb-2" 
+                style="width:80px; height:80px; object-fit:cover;">
+          </label>
+          <input type="file" id="profileUpload" accept="image/*" style="display:none;">
+          <h6 class="fw-bold"></h6>
+          <div class="badge bg-warning text-dark mb-2"></div>
 
           <div class="d-flex justify-content-center align-items-center gap-1 mb-1">
             <i class="bi bi-star-fill" style="font-size: 16px; color: #FFC107;"></i>
@@ -435,6 +443,28 @@
               <button class="btn btn-primary w-100" onclick="loadTeamModal()" data-bs-toggle="modal" data-bs-target="#teamModal" data-i18n="profile.viewTeam"></button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Daily Check In -->
+      <div class="card mb-3">
+        <div class="card-body text-center">
+          <h5 class="card-title" data-i18n="profile.dailyCheckIn">Daily Check-In</h5>
+          <p class="small text-muted mb-3" data-i18n="profile.checkInHint">
+            Check in every day to receive your reward.
+          </p>
+
+          <!-- Calendar Grid -->
+          <div class="row g-2 justify-content-center mb-3" id="checkInCalendar">
+            <!-- Days will be injected by JS -->
+          </div>
+
+          <div class="row justify-content-center">
+            <div class="col-9">
+              <button id="checkInBtn" class="btn btn-success w-100" onclick="dailyCheckIn('checkin')" data-i18n="profile.checkInNow"></button>
+            </div>
+          </div>
+          <div id="checkInStatus" class="mt-2 small text-muted"></div>
         </div>
       </div>
 
@@ -809,22 +839,25 @@
     </div>
   </div>
 
+  <!-- Terms & Conditions Modal -->
+  <div class="modal fade" id="tncModal" tabindex="-1" aria-labelledby="tncModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="tncModalLabel" data-i18n="tnc.title">Terms and Conditions</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div data-i18n="tnc.content"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="tnc.close">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    function moveCrisp() {
-      const crispBtn = document.querySelector(".crisp-client .cc-1m2mf");
-      if (crispBtn) {
-        crispBtn.style.bottom = "60px";
-        crispBtn.style.right = "14px";
-        crispBtn.style.zIndex = "999999";
-      }
-    }
-
-    // 初始执行
-    moveCrisp();
-
-    const observer = new MutationObserver(moveCrisp);
-    observer.observe(document.body, { childList: true, subtree: true });
-  
     const token = localStorage.getItem("token");
     if(!token)
     {
@@ -1076,6 +1109,10 @@
       document.getElementById('taskQty').innerText = user.tasks_completed || 0
       document.getElementById('completionRatio').innerText = `${user.completion_ratio}`;
       
+      if (user.profile_image && user.profile_image.trim() !== '') {
+        document.getElementById('profileImage').src = `data:image/png;base64,${user.profile_image}`;
+      }
+
       const optimizeBtn = document.getElementById('btnOptimize');
       const claimBtn    = document.getElementById('btnClaimComm');
 
@@ -1332,6 +1369,40 @@
       }
     }
 
+    let days = 7;
+    let checkedIn = Array(days).fill(false);
+
+    function dailyCheckIn(action) {
+      const calendar = document.getElementById("checkInCalendar");
+      const btn = document.getElementById("checkInBtn");
+      const status = document.getElementById("checkInStatus");
+
+      if (action === "checkin") {
+        const idx = checkedIn.indexOf(false);
+        if (idx === -1) {
+          status.setAttribute("data-i18n", "profile.checkInStatus.allDone");
+          status.innerText = i18n.t("profile.checkInStatus.allDone");
+          return;
+        }
+        checkedIn[idx] = true;
+        btn.disabled = true;
+        btn.className = "btn btn-secondary w-100";
+        btn.setAttribute("data-i18n", "profile.checkInStatus.checked");
+        btn.innerText = i18n.t("profile.checkInStatus.checked");
+        status.setAttribute("data-i18n", "profile.checkInStatus.success");
+        status.innerText = i18n.t("profile.checkInStatus.success", { day: idx + 1 });
+      }
+
+      calendar.innerHTML = checkedIn
+        .map((done, i) =>
+          `<div class="col-1 text-center p-2 border rounded" style="min-width:40px;">
+            <div class="${done ? 'bg-success text-white' : 'bg-light'} rounded p-2">${i + 1}</div>
+          </div>`
+        ).join("");
+    }
+
+    dailyCheckIn();
+
     function Logout() {
       localStorage.removeItem("token");
       window.location.href = "index.html";
@@ -1487,6 +1558,22 @@
         console.error('/me error:', err);
       });
     }
+
+    document.getElementById('profileUpload').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result;
+        document.getElementById('profileImage').src = base64;
+
+        await axios.post('/update-profile-image', {profile_image: base64}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      };
+      reader.readAsDataURL(file);
+    });
 
   </script>
 </body>

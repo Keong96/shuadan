@@ -18,8 +18,13 @@ function loadLanguage(lang) {
 function applyTranslations() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n')
-    if (translations[key]) {
-      el.innerText = translations[key]
+    const value = translations[key];
+    if (value) {
+      if (key === "tnc.content") {
+        el.innerHTML = value; // keep tags
+      } else {
+        el.textContent = value; // plain text
+      }
     }
   })
 

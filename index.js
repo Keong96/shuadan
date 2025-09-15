@@ -239,7 +239,7 @@ app.get('/me', verifyToken, async (req, res) => {
 
   try {
     const userRes = await client.query(`
-      SELECT id, username, phone, email, gender, to_char(dob, 'YYYY-MM-DD') AS dob, balance, referral_code, credit_score, vip_level
+      SELECT id, username, phone, email, gender, to_char(dob, 'YYYY-MM-DD') AS dob, balance, referral_code, credit_score, vip_level, profile_image
       FROM users
       WHERE id = $1 AND deleted_at IS NULL
     `, [userId]);
@@ -291,6 +291,7 @@ app.get('/me', verifyToken, async (req, res) => {
         email: user.email,
         gender: user.gender,
         dob: user.dob,
+        profile_image: user.profile_image,
         referral_code: user.referral_code,
         credit_score: user.credit_score,
         vip_level: user.vip_level,
@@ -566,6 +567,20 @@ app.post('/update-profile', verifyToken, async (req, res) => {
   } catch (err) {
     console.error('Update profile error:', err);
     res.status(500).json({ status: false, message: "Server Error"});
+  }
+});
+
+app.post('/update-profile-image', verifyToken, async (req, res) => {
+  const userId = req.user.userId;
+  const { profile_image } = req.body;
+
+  try {
+    await client.query(`UPDATE users SET profile_image = $1 WHERE id = $2`, [profile_image, userId]);
+
+    res.json({ status: true});
+  } catch (err) {
+    console.error('Update profile image error:', err);
+    res.status(500).json({ status: false, message: "Server Error" });
   }
 });
 
