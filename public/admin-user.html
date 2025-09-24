@@ -131,6 +131,7 @@
         <a class="nav-link active" href="/admin-user.html"><i class="bi bi-box-seam me-2"></i>用户管理</a>
         <a class="nav-link" href="/admin-task.html"><i class="bi bi-box-seam me-2"></i>产品管理</a>
         <a class="nav-link" href="/admin-transaction.html"><i class="bi bi-bank me-2"></i>交易明细</a>
+        <a class="nav-link" href="/admin-loan.html"><i class="bi bi-cash me-2"></i>贷款申请</a>
         <a class="nav-link" href="/admin-wallet.html"><i class="bi bi-wallet me-2"></i>钱包查询</a>
         <a class="nav-link" href="/admin-setting.html"><i class="bi bi-receipt me-2"></i>全局设定</a>
         <a class="nav-link" href="#" onclick="Logout()"><i class="bi bi-box-arrow-right me-2"></i>登出</a>
@@ -361,6 +362,23 @@
     </div>
   </div>
 
+  <!-- Check-in Modal -->
+  <div class="modal fade" id="checkInModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark text-white border-secondary">
+        <div class="modal-header border-bottom border-secondary">
+          <h5 class="modal-title">签到记录 <small id="checkinUser" class="text-muted"></small></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <ul id="checkinList" class="list-group list-group-flush">
+            <li class="list-group-item bg-dark text-muted">等待加载</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Reset Cycle Modal -->
   <div class="modal fade" id="confirmResetModal" tabindex="-1" aria-labelledby="confirmResetModalLable" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -409,11 +427,11 @@
     }
 
     const decoded_token = jwt_decode(token);
-    if (decoded_token.exp < Math.floor(Date.now()/1000) || decoded_token.userType !== 0)
+    if (decoded_token.exp < Math.floor(Date.now() / 1000) || (decoded_token.userType !== 0 && decoded_token.userType !== 1))
     {
-      window.stop();
-      localStorage.removeItem("token");
-      window.location.href = `${window.location.origin}/index.html`;
+      localStorage.removeItem('token');
+      window.location.href = '/index.html';
+      window.stop()
     }
 
     axios.get(`${window.location.origin}/users`, {
@@ -483,12 +501,21 @@
             </button>
 
             <button 
-              class="btn btn-sm btn-secondary me-1" 
+              class="btn btn-sm btn-light me-1" 
               data-bs-toggle="modal" 
               data-bs-target="#teamModal"
               data-id="${user.id}"
               data-username="${user.username}">
               查看团队
+            </button>
+
+            <button 
+              class="btn btn-sm btn-secondary me-1" 
+              data-bs-toggle="modal" 
+              data-bs-target="#checkInModal"
+              data-id="${user.id}"
+              data-username="${user.username}">
+              签到记录
             </button>
 
             <button 
@@ -702,6 +729,37 @@
       }
     });
     
+    const checkInModal = document.getElementById('checkInModal');
+    checkInModal.addEventListener('show.bs.modal', async function (event) {
+      const button = event.relatedTarget;
+      const userId = button.getAttribute('data-id');
+      const username = button.getAttribute('data-username');
+
+      const listEl = checkInModal.querySelector('#checkinList');
+      const owner = checkInModal.querySelector('#checkinUser');
+
+      if (owner) owner.textContent = `（${username}）`;
+      listEl.innerHTML = `<li class="list-group-item bg-dark text-muted">加载中...</li>`;
+
+      try {
+        const { data } = await axios.get(`${window.location.origin}/checkins/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const list = data?.data || [];
+        if (!list.length) {
+          listEl.innerHTML = `<li class="list-group-item bg-dark text-muted">暂无签到记录</li>`;
+          return;
+        }
+
+        listEl.innerHTML = list.map(r => `
+          <li class="list-group-item bg-dark text-white">${r.checkin_date}</li>
+        `).join('');
+      } catch (err) {
+        listEl.innerHTML = `<li class="list-group-item bg-dark text-danger">加载失败</li>`;
+      }
+    });
+
     const confirmResetModal = document.getElementById('confirmResetModal');
     confirmResetModal.addEventListener('show.bs.modal', function(event) {
       const btn = event.relatedTarget;

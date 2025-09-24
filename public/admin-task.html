@@ -232,6 +232,8 @@
         <a class="nav-link" href="/admin-user.html"><i class="bi bi-people me-2"></i>用户管理</a>
         <a class="nav-link active" href="/admin-task.html"><i class="bi bi-box-seam me-2"></i>产品管理</a>
         <a class="nav-link" href="/admin-transaction.html"><i class="bi bi-bank me-2"></i>交易明细</a>
+        <a class="nav-link" href="/admin-loan.html"><i class="bi bi-cash me-2"></i>贷款申请</a>
+        <a class="nav-link" href="/admin-wallet.html"><i class="bi bi-wallet me-2"></i>钱包查询</a>
         <a class="nav-link" href="/admin-setting.html"><i class="bi bi-receipt me-2"></i>全局设定</a>
         <a class="nav-link" href="#" onclick="Logout()"><i class="bi bi-box-arrow-right me-2"></i>登出</a>
       </nav>
@@ -320,10 +322,12 @@
     const token = localStorage.getItem("token");
     if (!token) location.href = '/index.html';
 
-    const decoded = jwt_decode(token);
-    if (!decoded || decoded.userType > 1 || decoded.exp < Date.now() / 1000) {
-      localStorage.removeItem("token");
-      location.href = '/index.html';
+    const decoded_token = jwt_decode(token);
+    if (decoded_token.exp < Math.floor(Date.now() / 1000) || (decoded_token.userType !== 0 && decoded_token.userType !== 1))
+    {
+      localStorage.removeItem('token');
+      window.location.href = '/index.html';
+      window.stop()
     }
 
     async function loadTasks() {

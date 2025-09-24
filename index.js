@@ -220,12 +220,21 @@ app.post('/register', async (req, res) => {
       }
     }
 
-    await client.query(
+    const insertUser = await client.query(
       `INSERT INTO users 
-        (username, password, security_pin, phone, email, gender, dob, referral_code, referred_by, status, user_type, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, 2, NOW())`,
+        (username, password, security_pin, phone, email, gender, dob, referral_code, referred_by, status, user_type, balance, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true,2,10.00,NOW())
+       RETURNING id`,
       [username, password, securityPin, phone, email, gender, dob, selfReferralCode, referred_by]
-    )
+    );
+
+    const userId = insertUser.rows[0].id;
+
+    await client.query(
+      `INSERT INTO transactions (user_id, amount, type, status, remark, created_at)
+       VALUES ($1,$2,$3,$4,$5,NOW())`,
+      [userId, 10.00, 'DEPOSIT', 'APPROVED', 'New User Benefit']
+    );
 
     res.json({ status: true, message: t('success.register') });
   } catch (err) {
@@ -239,7 +248,7 @@ app.get('/me', verifyToken, async (req, res) => {
 
   try {
     const userRes = await client.query(`
-      SELECT id, username, phone, email, gender, to_char(dob, 'YYYY-MM-DD') AS dob, balance, referral_code, credit_score, vip_level, profile_image
+      SELECT id, username, phone, email, gender, to_char(dob, 'YYYY-MM-DD') AS dob, balance, referral_code, credit_score, vip_level, profile_image, draw_ticket
       FROM users
       WHERE id = $1 AND deleted_at IS NULL
     `, [userId]);
@@ -298,7 +307,8 @@ app.get('/me', verifyToken, async (req, res) => {
         balance: user.balance,
         daily_profit: daily_profit,
         tasks_completed: tasks_completed,
-        completion_ratio: completion_ratio
+        completion_ratio: completion_ratio,
+        draw_ticket: user.draw_ticket
       }
     });
 
@@ -313,12 +323,28 @@ app.get('/my-transactions', verifyToken, async (req, res) => {
     const userId = req.user.userId;
     const lang = req.headers['accept-language'] || 'en';
 
-    const { rows } = await client.query(`
+    const { types } = req.query;
+
+    let conditions = [`user_id = $1`, `deleted_at IS NULL`];
+    let params = [userId];
+    let idx = params.length;
+
+    if (types) {
+      const arr = types.split(',').map(t => t.trim().toUpperCase());
+      idx++;
+      conditions.push(`UPPER(type) = ANY($${idx})`);
+      params.push(arr);
+    }
+
+    const query = `
       SELECT id, amount, type, status, remark, created_at
       FROM transactions
-      WHERE user_id = $1 AND deleted_at IS NULL
+      WHERE ${conditions.join(' AND ')}
       ORDER BY created_at DESC
-    `, [userId]);
+      LIMIT 100
+    `;
+
+    const { rows } = await client.query(query, params);
 
     const data = rows.map(tx => ({
       ...tx,
@@ -410,7 +436,8 @@ app.post('/orders', verifyToken, async (req, res) => {
     if (completedCount >= cycle.cycle_size) {
       return res.json({
         status: true,
-        data: parseFloat(cycle.commission_amount || 0).toFixed(2)
+        data: parseFloat(cycle.commission_amount || 0).toFixed(2),
+        completedTasks: completedCount
       });
     }
 
@@ -459,14 +486,18 @@ app.post('/orders', verifyToken, async (req, res) => {
     // 9) 插入订单（状态 PENDING），并把 order id append 到 cycles.orders（不改变 commission_amount）
     const or = await client.query(
       `INSERT INTO orders (user_id, cycle_id, task_id, amount, commission, status, created_at)
-       VALUES ($1, $2, $3, $4, $5, 'PENDING', NOW())
-       RETURNING id, amount, commission`,
+      VALUES ($1, $2, $3, $4, $5, 'PENDING', NOW())
+      RETURNING id, amount, commission`,
       [userId, cycle.id, task.id, amount, commission]
     );
 
+    // 更新 cycle.orders 并累加 commission_amount
     await client.query(
-      `UPDATE cycles SET orders = array_append(COALESCE(orders, '{}'), $1) WHERE id = $2`,
-      [or.rows[0].id, cycle.id]
+      `UPDATE cycles 
+      SET orders = array_append(COALESCE(orders, '{}'), $1),
+          commission_amount = COALESCE(commission_amount, 0) + $2
+      WHERE id = $3`,
+      [or.rows[0].id, commission, cycle.id]
     );
 
     // 10) 返回新订单给前端
@@ -521,7 +552,7 @@ app.post('/orders/:id/review', verifyToken, async (req, res) => {
     await client.query(`
       INSERT INTO transactions (user_id, amount, type, status, remark) 
       VALUES ($1, $2, 'PURCHASE', 'APPROVED', $3)
-    `, [userId, -amount, `#${orderId}`]);
+    `, [userId, -amount, `#O_${orderId}`]);
 
     await client.query(`
       UPDATE orders 
@@ -608,7 +639,7 @@ app.post('/claim-commission', verifyToken, async (req, res) => {
     // 检查是否已有未处理的 claim transaction
     const pendingCheck = await client.query(`
       SELECT 1 FROM transactions 
-      WHERE user_id = $1 AND type = 'COMMISSION' 
+      WHERE user_id = $1 AND type = 'COMMISSION'
         AND cycle_id = $2
         AND status = 'PENDING'
         AND deleted_at IS NULL
@@ -633,8 +664,8 @@ app.post('/claim-commission', verifyToken, async (req, res) => {
     // 插入交易（PENDING）
     await client.query(`
       INSERT INTO transactions (user_id, cycle_id, type, amount, status, remark)
-      VALUES ($1, $2, 'COMMISSION', $3, 'PENDING', 'Commission claim')
-    `, [userId, current.id, commission]);
+      VALUES ($1, $2, 'COMMISSION', $3, 'PENDING', $4)
+    `, [userId, current.id, commission, "#C_"+current.id]);
 
     res.status(200).json({ status: true, message: t('commission.alreadyClaimed') });
 
@@ -726,6 +757,252 @@ app.get('/team', verifyToken, async (req, res) => {
   } catch (err) {
     console.error('Error fetching user team:', err);
     res.status(500).json({ status: false, message: 'Failed to fetch team' });
+  }
+});
+
+app.get('/my-loans', verifyToken, async (req, res) => {
+  try {
+    const loansResult = await client.query(
+      'SELECT id, amount, status, remark, created_at FROM loan_requests WHERE user_id = $1 ORDER BY created_at DESC',
+      [req.user.userId]
+    );
+
+    const configResult = await client.query(
+      'SELECT value FROM config WHERE key = $1',
+      ['vip_tiers']
+    );
+
+    const vipTiers = configResult.rows.length > 0 ? JSON.parse(configResult.rows[0].value) : null;
+
+    return res.json({
+      data: loansResult.rows,
+      vipTiers
+    });
+  } catch (err) {
+    console.error('Error fetching my loans:', err);
+    return res.status(500).json({ status: false, error: 'Failed to fetch loans' });
+  }
+});
+
+app.post('/loan-requests', verifyToken, async (req, res) => {
+  const { amount, pin, remark } = req.body;
+
+  if (!amount || isNaN(amount) || amount <= 0) {
+    return res.status(200).json({ status: false, message: 'Invalid loan amount' });
+  }
+
+  if (!pin) {
+    return res.status(200).json({ status: false, message: 'PIN is required' });
+  }
+
+  try {
+    // 从 users 表检查 PIN
+    const userResult = await client.query(
+      'SELECT security_pin FROM users WHERE id = $1',
+      [req.user.userId]
+    );
+
+    if (!userResult.rows.length || userResult.rows[0].security_pin !== pin) {
+      return res.status(200).json({ status: false, message: 'Incorrect PIN' });
+    }
+
+    // 插入 loan
+    const insertResult = await client.query(
+      'INSERT INTO loan_requests (user_id, amount, remark) VALUES ($1, $2, $3) RETURNING *',
+      [req.user.userId, amount, remark || null]
+    );
+
+    // 取 VIP 配置
+    const configResult = await client.query(
+      'SELECT value FROM config WHERE key = $1',
+      ['vip_tiers']
+    );
+    const vipTiers = configResult.rows.length > 0 ? JSON.parse(configResult.rows[0].value) : null;
+
+    return res.status(200).json({
+      status: true,
+      message: 'Loan request submitted',
+      data: insertResult.rows[0],
+      vipTiers
+    });
+
+  } catch (err) {
+    console.error('Error creating loan request:', err);
+    return res.status(500).json({ status: false, message: 'Failed to create loan request' });
+  }
+});
+
+app.get('/checkin', verifyToken, async (req, res) => {
+  const t = key => (req && typeof req.t === 'function' ? req.t(key) : key);
+  const userId = req.user && req.user.userId;
+  if (!userId) return res.status(200).json({ status: false, message: t('error.invalidUser') });
+
+  try {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+
+    // checked days in current month
+    const month = now.getMonth() + 1;
+    const year = yyyy;
+    const chRes = await client.query(
+      `SELECT EXTRACT(DAY FROM checkin_date) AS day
+       FROM checkin
+       WHERE user_id = $1
+         AND EXTRACT(YEAR FROM checkin_date) = $2
+         AND EXTRACT(MONTH FROM checkin_date) = $3
+       ORDER BY day`,
+      [userId, year, month]
+    );
+    const checkedDays = chRes.rows.map(r => parseInt(r.day, 10));
+
+    // is checked today?
+    const chkTodayRes = await client.query(
+      `SELECT 1 FROM checkin WHERE user_id = $1 AND checkin_date = $2 LIMIT 1`,
+      [userId, todayStr]
+    );
+    const todayChecked = chkTodayRes.rowCount > 0;
+
+    // number of cycles finished today
+    const cycleRes = await client.query(
+      `SELECT COUNT(*)::int AS cnt
+       FROM cycles
+       WHERE user_id = $1
+         AND finished_at::date = $2
+         AND deleted_at IS NULL`,
+      [userId, todayStr]
+    );
+    const todayCycles = parseInt(cycleRes.rows[0].cnt, 10) || 0;
+    const requiredCycles = 2;
+
+    return res.status(200).json({
+      status: true,
+      message: '',
+      data: { checkedDays, todayChecked, todayCycles, requiredCycles }
+    });
+  } catch (err) {
+    console.error('GET /checkin error', err);
+    return res.status(500).json({ status: false, message: t('error.internalServer') });
+  }
+});
+
+app.post('/checkin', verifyToken, async (req, res) => {
+  const t = key => (req && typeof req.t === 'function' ? req.t(key) : key);
+  const userId = req.user && req.user.userId;
+  if (!userId) return res.status(200).json({ status: false, message: t('error.invalidUser') });
+
+  try {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+
+    // check cycles completed today
+    const cycleRes = await client.query(
+      `SELECT COUNT(*)::int AS cnt
+       FROM cycles
+       WHERE user_id = $1
+         AND finished_at::date = $2
+         AND deleted_at IS NULL`,
+      [userId, todayStr]
+    );
+    const todayCycles = parseInt(cycleRes.rows[0].cnt, 10) || 0;
+    const requiredCycles = 2;
+    if (todayCycles < requiredCycles) {
+      return res.status(200).json({ status: false, message: t('profile.checkInStatus.need2cycle') });
+    }
+
+    // already checked in?
+    const chkRes = await client.query(
+      `SELECT 1 FROM checkin WHERE user_id = $1 AND checkin_date = $2 LIMIT 1`,
+      [userId, todayStr]
+    );
+    if (chkRes.rowCount > 0) {
+      return res.status(200).json({ status: false, message: t('profile.checkInStatus.allDone') });
+    }
+
+    // insert check-in
+    await client.query(
+      `INSERT INTO checkin (user_id, checkin_date, created_at)
+       VALUES ($1, $2, NOW())`,
+      [userId, todayStr]
+    );
+
+    return res.status(200).json({ status: true, message: t('profile.checkInStatus.success') });
+  } catch (err) {
+    console.error('POST /checkin error', err);
+    return res.status(500).json({ status: false, message: t('error.internalServer') });
+  }
+});
+
+app.get('/lucky_draw_rates', verifyToken, async (req, res) => {
+  try {
+    const configRes = await client.query(
+      "SELECT value FROM config WHERE key='lucky_draw_prizes' LIMIT 1"
+    );
+    if (!configRes.rows.length) 
+      return res.status(200).json({ status: false, message: 'Prize config not found' });
+
+    const prizes = JSON.parse(configRes.rows[0].value); // array of {name, rate}
+
+    return res.status(200).json({ status: true, data: prizes });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ status: false, message: 'Failed to load prizes' });
+  }
+});
+
+app.post('/lucky_draw_spin', verifyToken, async (req, res) => {
+  try {
+    const userRes = await client.query(
+      'SELECT draw_ticket FROM users WHERE id=$1',
+      [req.user.userId]
+    );
+    if (!userRes.rows.length) 
+      return res.status(200).json({ status: false, message: 'User not found' });
+
+    const drawTicket = userRes.rows[0].draw_ticket;
+    if (drawTicket < 1) 
+      return res.status(200).json({ status: false, message: 'No draw tickets left' });
+
+    // fetch prize config
+    const configRes = await client.query(
+      "SELECT value FROM config WHERE key='lucky_draw_prizes' LIMIT 1"
+    );
+    if (!configRes.rows.length) 
+      return res.status(500).json({ status: false, message: 'Prize config not found' });
+
+    const prizes = JSON.parse(configRes.rows[0].value);
+
+    // weighted random based on rate
+    const totalRate = prizes.reduce((sum, p) => sum + (p.rate || 0), 0);
+    let rand = Math.random() * totalRate;
+    let prize;
+    for (const p of prizes) {
+      rand -= p.rate || 0;
+      if (rand <= 0) {
+        prize = p;
+        break;
+      }
+    }
+    if (!prize) prize = prizes[prizes.length - 1]; // fallback
+
+    // deduct ticket
+    await client.query('UPDATE users SET draw_ticket = draw_ticket - 1 WHERE id=$1', [req.user.userId]);
+
+    // insert record
+    await client.query(
+      'INSERT INTO draw_records (user_id, prize_name, created_at) VALUES ($1, $2, NOW())',
+      [req.user.userId, prize.name]
+    );
+
+    return res.status(200).json({ status: true, data: prize.name });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ status: false, message: 'Spin failed' });
   }
 });
 
@@ -923,7 +1200,7 @@ app.put('/orders/:id', verifyAdminToken, async (req, res) => {
   `, [amount, (amount * commission_rate / 100), id]);
 
     if (result.rowCount === 0) {
-      return res.status(200).json({ status: false, error: 'Order not found' });
+      return res.status(200).json({ status: false, message: 'Order not found' });
     }
 
     const order = result.rows[0];
@@ -959,7 +1236,7 @@ app.delete('/orders/:id', verifyAdminToken, async (req, res) => {
       RETURNING cycle_id
     `, [orderId]);
 
-    if (!upd.rowCount) return res.status(404).json({ status: false, message: 'Order not found' });
+    if (!upd.rowCount) return res.status(200).json({ status: false, message: 'Order not found' });
 
     const cycleId = upd.rows[0].cycle_id;
 
@@ -981,7 +1258,7 @@ app.get('/cycles', verifyAdminToken, async (req, res) => {
   try {
     const { userId } = req.query;
     if (!userId) {
-      return res.status(200).json({ status: false, error: 'Missing userId' });
+      return res.status(200).json({ status: false, message: 'Missing userId' });
     }
 
     const cyclesResult = await client.query(`
@@ -1030,21 +1307,21 @@ app.post('/cycles/:id/orders', verifyAdminToken, async (req, res) => {
   const cycleId = parseInt(req.params.id, 10);
   const { productId } = req.body;
 
-  if (!productId) return res.status(400).json({ status: false, message: 'productId required' });
+  if (!productId) return res.status(200).json({ status: false, message: 'productId required' });
 
   try {
     // 查 cycle
     const cRes = await client.query(`
       SELECT user_id FROM cycles WHERE id=$1 AND deleted_at IS NULL
     `, [cycleId]);
-    if (!cRes.rowCount) return res.status(404).json({ status: false, message: 'Cycle not found' });
+    if (!cRes.rowCount) return res.status(200).json({ status: false, message: 'Cycle not found' });
     const userId = cRes.rows[0].user_id;
 
     // 查 product
     const pRes = await client.query(`
       SELECT product_price FROM tasks WHERE id=$1 AND deleted_at IS NULL
     `, [productId]);
-    if (!pRes.rowCount) return res.status(404).json({ status: false, message: 'Product not found' });
+    if (!pRes.rowCount) return res.status(200).json({ status: false, message: 'Product not found' });
     const amount = parseFloat(pRes.rows[0].product_price);
 
     // 查 config 取 commission_rate
@@ -1079,7 +1356,7 @@ app.post('/cycles/:id/orders', verifyAdminToken, async (req, res) => {
 
 app.post('/cycle/reset', verifyAdminToken, async (req, res) => {
   const userId = req.body.userId;
-  if (!userId) return res.status(200).json({ status: false, error: 'Missing userId' });
+  if (!userId) return res.status(200).json({ status: false, message: 'Missing userId' });
 
   try {
     // 先读取当前 active cycle 的设置（取最新一笔 active）
@@ -1126,18 +1403,25 @@ app.post('/cycle/reset', verifyAdminToken, async (req, res) => {
     const referredBy = ures.rows[0]?.referred_by || null;
 
     if (referredBy && commissionAmount > 0) {
-      const refererShare = parseFloat((commissionAmount * downlineRate).toFixed(2));
-      if (refererShare > 0) {
-        await client.query(
-          `INSERT INTO transactions (user_id, amount, type, status, remark, created_at)
-           VALUES ($1, $2, 'COMMISSION', 'APPROVED', $3, NOW())`,
-          [referredBy, refererShare, `Downline share from user ${userId} cycle ${old.id}`]
-        );
+      const userRes = await client.query(`SELECT id, username FROM users WHERE id = $1`, [referredBy]);
+      const referer = userRes.rows[0];
 
-        await client.query(
-          `UPDATE users SET balance = balance + $1 WHERE id = $2`,
-          [refererShare, referredBy]
-        );
+      if (referer) {
+        const refererShare = parseFloat((commissionAmount * downlineRate).toFixed(2));
+        if (refererShare > 0) {
+          const remark = `Downline: User ${referer.username} (ID:${referer.id}) - #C_${old.id}`;
+
+          await client.query(
+            `INSERT INTO transactions (user_id, amount, type, status, remark, created_at)
+            VALUES ($1, $2, 'COMMISSION', 'PENDING', $3, NOW())`,
+            [referer.id, refererShare, remark]
+          );
+
+          await client.query(
+            `UPDATE users SET balance = balance + $1 WHERE id = $2`,
+            [refererShare, referer.id]
+          );
+        }
       }
     }
 
@@ -1243,13 +1527,21 @@ app.patch('/transactions/:id', verifyAdminToken, async (req, res) => {
         const referredBy = ures.rows[0] ? ures.rows[0].referred_by : null;
 
         if (referredBy) {
-          const refererShare = parseFloat((amount * downlineRate).toFixed(2));
-          if (refererShare > 0) {
-            const remark = `Downline share from user ${user_id} cycle ${cycle_id}`;
-            await client.query(`
-              INSERT INTO transactions (user_id, type, amount, status, remark)
-              VALUES ($1, 'COMMISSION', $2, 'PENDING', $3)
-            `, [referredBy, refererShare, remark]);
+          const userRes = await client.query(
+            `SELECT id, username FROM users WHERE username = $1`,
+            [referredBy]
+          );
+          const referer = userRes.rows[0];
+          
+          if (referer) {
+            const refererShare = parseFloat((amount * downlineRate).toFixed(2));
+            if (refererShare > 0) {
+              const remark = `Downline: User ${referer.username} (ID:${referer.id}) - #C_${cycle_id}`;
+              await client.query(`
+                INSERT INTO transactions (user_id, type, amount, status, remark)
+                VALUES ($1, 'COMMISSION', $2, 'APPROVED', $3)
+              `, [referer.id, refererShare, remark]);
+            }
           }
         }
 
@@ -1258,8 +1550,12 @@ app.patch('/transactions/:id', verifyAdminToken, async (req, res) => {
           SELECT key, value FROM config WHERE key IN ('cycle_size', 'blocker_indexes')
         `);
         const cfgMap = Object.fromEntries(configRes.rows.map(r => [r.key, r.value]));
-        const newSize = parseInt(cfgMap['cycle_size'], 10);
-        const blockerIndexes = cfgMap['blocker_indexes'].split(',').map(n => parseInt(n, 10));
+
+        const newSize = parseInt(cfgMap['cycle_size'], 10) || 20;
+        const blockerIndexes = (cfgMap['blocker_indexes'] || '')
+          .split(',')
+          .map(n => parseInt(n.trim(), 10))
+          .filter(n => !isNaN(n));
 
         await client.query(`
           INSERT INTO cycles (user_id, cycle_size, blocker_indexes) 
@@ -1301,6 +1597,60 @@ app.delete('/transactions/:id', verifyAdminToken, async (req, res) => {
   }
 });
 
+app.get('/loan-requests', verifyAdminToken, async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT l.id, l.user_id, u.username, l.amount, l.status, l.remark, l.created_at
+      FROM loan_requests l
+      JOIN users u ON l.user_id = u.id
+      ORDER BY l.created_at DESC
+    `);
+    return res.json({ data: result.rows });
+  } catch (err) {
+    console.error('Error fetching loan requests:', err);
+    return res.status(500).json({ error: 'Failed to fetch loan requests' });
+  }
+});
+
+app.patch('/loan-requests/:id', verifyAdminToken, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!['APPROVED', 'REJECTED'].includes(status)) {
+    return res.status(200).json({ status:false, message: 'Invalid status' });
+  }
+
+  try {
+    const result = await client.query(
+      'UPDATE loan_requests SET status = $1 WHERE id = $2 RETURNING *',
+      [status, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(200).json({ error: 'Loan request not found' });
+    }
+
+    return res.json({ message: 'Loan request updated', data: result.rows[0] });
+  } catch (err) {
+    console.error('Error updating loan request:', err);
+    return res.status(500).json({ status:false, error: 'Failed to update loan request' });
+  }
+});
+
+app.delete('/loan-requests/:id', verifyAdminToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await client.query('DELETE FROM loan_requests WHERE id = $1 RETURNING *', [id]);
+    if (result.rowCount === 0) {
+      return res.status(200).json({ status: false, message: 'Loan request not found' });
+    }
+    return res.json({ message: 'Loan request deleted', data: result.rows[0] });
+  } catch (err) {
+    console.error('Error deleting loan request:', err);
+    return res.status(500).json({ status: false, message: 'Failed to delete loan request' });
+  }
+});
+
 app.get('/team/:id', verifyAdminToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -1331,6 +1681,24 @@ app.get('/team/:id', verifyAdminToken, async (req, res) => {
   } catch (err) {
     console.error('Error fetching admin team:', err);
     res.status(500).json({ status: false, message: 'Failed to fetch team' });
+  }
+});
+
+app.get('/checkins/:id', verifyAdminToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { rows } = await client.query(`
+      SELECT created_at::date AS checkin_date
+      FROM checkin
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+    `, [id]);
+
+    res.json({ status: true, data: rows });
+  } catch (err) {
+    console.error('Error fetching checkins:', err);
+    res.status(500).json({ status: false, message: 'Failed to fetch checkins' });
   }
 });
 

@@ -7,6 +7,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="localization.js" defer></script>
@@ -277,11 +278,26 @@
           <i class="bi bi-list-columns-reverse me-1"></i>
           <span data-i18n="funds.transaction.title">Transaction History</span>
         </h5>
-        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#withdrawModal">
-          <i class="bi bi-download me-1"></i>
-          <span data-i18n="funds.withdraw.title">Withdraw</span>
-        </button>
+        <div class="d-flex flex-column gap-2">
+          <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#withdrawModal">
+            <i class="bi bi-download me-1"></i>
+            <span data-i18n="funds.withdraw.title">Withdraw</span>
+          </button>
+          <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#loanModal">
+            <i class="bi bi-cash-stack me-1"></i>
+            <span data-i18n="funds.loan.title">Apply Loan</span>
+          </button>
+        </div>
       </div>
+
+      <!-- Filters -->
+      <ul class="nav nav-pills nav-sm mb-3 flex-nowrap overflow-auto" id="filterGroup" style="white-space: nowrap; font-size: 0.8rem;">
+          <li class="nav-item"><a class="nav-link active" href="#" data-value="ALL">All</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-value="DEPOSIT">Deposit</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-value="PURCHASE">Purchase</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-value="WITHDRAWAL">Withdrawal</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-value="COMMISSION">Commission</a></li>
+        </ul>
 
       <!-- Scrollable Table -->
       <div style="overflow-y: auto;">
@@ -450,21 +466,34 @@
       <div class="card mb-3">
         <div class="card-body text-center">
           <h5 class="card-title" data-i18n="profile.dailyCheckIn">Daily Check-In</h5>
-          <p class="small text-muted mb-3" data-i18n="profile.checkInHint">
-            Check in every day to receive your reward.
-          </p>
 
           <!-- Calendar Grid -->
           <div class="row g-2 justify-content-center mb-3" id="checkInCalendar">
             <!-- Days will be injected by JS -->
           </div>
 
-          <div class="row justify-content-center">
-            <div class="col-9">
-              <button id="checkInBtn" class="btn btn-success w-100" onclick="dailyCheckIn('checkin')" data-i18n="profile.checkInNow"></button>
-            </div>
+          <!-- Progress info -->
+          <div id="checkInProgress" class="mt-2 small fw-bold"></div>
+          <div id="checkInStatus" class="mt-1 small text-muted"></div>
+        </div>
+      </div>
+
+      <!-- Lucky Draw -->
+      <div class="card shadow-sm mb-3 border-primary">
+        <div class="card-body text-center">
+          <h5 class="card-title fw-bold" data-i18n="profile.luckyDraw">Lucky Draw</h5>
+          <div class="d-flex justify-content-center align-items-center my-2">
+            <span data-i18n="profile.luckyDrawTicket">Tickets:</span>
+            <span id="luckyDrawTicket" class="fw-bold mx-2" style="font-size:1.2rem;">1</span>
           </div>
-          <div id="checkInStatus" class="mt-2 small text-muted"></div>
+          <button 
+            class="btn btn-primary w-75 py-2" 
+            onclick="initLuckyDraw()" 
+            data-bs-toggle="modal" 
+            data-bs-target="#luckyDrawModal"
+            data-i18n="profile.drawNow">
+            Draw Now
+          </button>
         </div>
       </div>
 
@@ -552,6 +581,71 @@
 
           <small class="text-muted d-block mt-2" data-i18n="funds.withdraw.note">
             * Withdrawals require task completion and service fee.
+          </small>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Loan Modal -->
+  <div class="modal fade" id="loanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow">
+
+        <div class="modal-header border-bottom">
+          <h5 class="modal-title fw-semibold" data-i18n="funds.loan.title">Apply Loan</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body px-4 py-3">
+          <!-- Loan Limit -->
+          <label class="small text-muted" data-i18n="funds.loan.limit">Loan Limit</label>
+          <h3 id="loanLimit" class="mb-3 text-info">$0.00</h3>
+
+          <!-- Loan History -->
+          <div class="mb-3">
+            <label class="small text-muted" data-i18n="funds.loan.history">Previous Applications</label>
+            <div class="table-responsive" style="max-height: 200px; overflow-y:auto;">
+              <table class="table table-sm table-striped table-hover text-center mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>ID</th>
+                    <th data-i18n="funds.loan.date">Date</th>
+                    <th data-i18n="funds.loan.amount">Amount</th>
+                    <th data-i18n="funds.loan.status">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="loanTableBody">
+                  <tr><td colspan="4" class="text-muted">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Apply Loan Form -->
+          <form id="loanForm">
+            <div class="mb-2 d-flex align-items-center">
+              <i class="bi bi-currency-dollar me-2 fs-5"></i>
+              <input id="loanAmountInput" type="number" step="0.01" class="form-control flex-grow-1"
+                data-i18n-placeholder="funds.loan.placeholder.amount" required
+                placeholder="Enter loan amount">
+            </div>
+
+            <div class="mb-3 d-flex align-items-center">
+              <i class="bi bi-key me-2 fs-5"></i>
+              <input type="password" class="form-control flex-grow-1" maxlength="6"
+                data-i18n-placeholder="funds.loan.placeholder.pin" required
+                placeholder="Enter 6-digit PIN">
+            </div>
+
+            <button type="button" class="btn btn-info w-100" onclick="submitLoan()">
+              <span data-i18n="funds.loan.submit">Submit Loan Application</span>
+            </button>
+          </form>
+
+          <small class="text-muted d-block mt-2" data-i18n="funds.loan.note">
+            * Loan limit depends on your VIP level.
           </small>
         </div>
 
@@ -671,7 +765,7 @@
           <div class="mb-3">
             <i class="bi bi-check-circle-fill text-success fs-1 mb-2"></i>
             <h5 data-i18n="commModal.cycleComplete">You have completed your current cycle!</h5>
-            <p class="text-muted" data-i18n="commModal.details">Completed Tasks: <strong id="completedTasks">0/20</strong></p>
+            <p class="text-muted" data-i18n="commModal.details">Completed Tasks: <strong id="completedTasks"></strong></p>
           </div>
           <div class="border-top pt-3 mt-2">
             <span data-i18n="commModal.message">Total commission to claim:</span>
@@ -813,7 +907,7 @@
           </form>
         </div>
         <div class="modal-footer">
-          <button type="button" onclick="UpdateProfile()" class="btn btn-primary w-100" data-i18n="modal.withdraw.save">Save</button>
+          <button type="button" onclick="updateProfile()" class="btn btn-primary w-100" data-i18n="modal.withdraw.save">Save</button>
         </div>
       </div>
     </div>
@@ -852,6 +946,45 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="tnc.close">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lucky Draw Modal -->
+  <div class="modal fade" id="luckyDrawModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+       <div class="modal-content text-center" style="background: transparent; border: none; box-shadow: none;">
+        <div class="modal-body">
+          <div style="position: relative; width: 300px; height: 300px; margin: 0 auto;">
+            <!-- Sector background -->
+            <img src="/img/sector-bg.png" 
+                alt="Sector Background"
+                style="position:absolute; top:-25px; left:-25px; width:350px; height:350px; z-index:4; border-radius:25%;" />
+
+            <!-- Lucky draw canvas -->
+            <canvas id="luckyWheelCanvas" 
+                    width="225" 
+                    height="225" 
+                    style="position:absolute; top:37.5px; left:37.5px; z-index:2;">
+            </canvas>
+
+            <!-- Spin button (image) -->
+            <img id="luckySpinBtn" 
+                src="/img/spin-button.png" 
+                alt="Spin Button"
+                style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+                        width:50px; height:50px; border-radius:50%; z-index:6; cursor:pointer;" />
+
+            <!-- Foreground frame -->
+            <img src="/img/wheel-foreground.png" 
+                alt="Frame"
+                style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:4;" />
+          </div>
+
+          <div id="luckyResultCard" class="alert alert-success mt-3" style="display:none;">
+            <span id="luckyResult"></span>
+          </div>
         </div>
       </div>
     </div>
@@ -898,18 +1031,39 @@
           loadTaskRecord();
           break;
         case 'profile':
+          dailyCheckIn();
           break;
         default:
           break;
       }
     }
 
+    function getSelectedFilters() {
+      const active = document.querySelector('#filterGroup .nav-link.active');
+      if (!active || active.dataset.value === 'ALL') return { types: [] };
+      return { types: [active.dataset.value] };
+    }
+
+    document.querySelectorAll('#filterGroup .nav-link').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        document.querySelectorAll('#filterGroup .nav-link').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+        loadTransactions();
+      });
+    });
+
     async function loadTransactions() {
       const tbody = document.getElementById('transactionTableBody');
       tbody.innerHTML = `<tr><td colspan="6" class="text-muted">Loading...</td></tr>`;
 
       try {
-        const { data } = await axios.get(`${window.location.origin}/my-transactions`, {
+        const { types } = getSelectedFilters();
+
+        const params = new URLSearchParams();
+        if (types.length) params.append('types', types.join(','));
+
+        const { data } = await axios.get(`${window.location.origin}/my-transactions?${params.toString()}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             'Accept-Language': localStorage.getItem('lang') || 'en'
@@ -919,7 +1073,6 @@
         if (!data.status || !Array.isArray(data.data)) throw new Error();
 
         const transactions = data.data;
-
         if (transactions.length === 0) {
           tbody.innerHTML = `<tr><td colspan="6" class="text-muted">No transactions found.</td></tr>`;
           return;
@@ -934,19 +1087,14 @@
             commission: 'bg-info',
             withdrawal: 'bg-secondary',
             deposit: 'bg-success',
-            bonus: 'bg-warning',
-            adjustment: 'bg-dark'
-          };
-
-          const statusClassMap = {
-            pending: 'bg-warning text-dark',
-            approved: 'bg-success',
-            rejected: 'bg-danger',
-            failed: 'bg-danger'
           };
 
           const typeClass = typeClassMap[tx.type.toLowerCase()] || 'bg-secondary';
-          const statusClass = statusClassMap[tx.status.toLowerCase()] || 'bg-secondary';
+          const statusClass = {
+            pending: 'bg-warning text-dark',
+            approved: 'bg-success',
+            rejected: 'bg-danger',
+          }[tx.status.toLowerCase()] || 'bg-secondary';
 
           const row = document.createElement('tr');
           row.innerHTML = `
@@ -964,7 +1112,7 @@
         console.error('loadTransactions error:', err);
       }
     }
-
+    
     async function takeOrder() {
       const modalEl    = document.getElementById('taskModal');
       const imgEl      = modalEl.querySelector('#taskImage');
@@ -1110,7 +1258,7 @@
       document.getElementById('completionRatio').innerText = `${user.completion_ratio}`;
       
       if (user.profile_image && user.profile_image.trim() !== '') {
-        document.getElementById('profileImage').src = `data:image/png;base64,${user.profile_image}`;
+        document.getElementById('profileImage').src = `${user.profile_image}`;
       }
 
       const optimizeBtn = document.getElementById('btnOptimize');
@@ -1152,6 +1300,7 @@
       document.getElementById('profileProfit').innerText = `${parseFloat(user.daily_profit || 0).toFixed(2)} USD`
 
       document.getElementById('inviteCode').innerText = user.referral_code || '-'
+      document.getElementById('luckyDrawTicket').innerText = user.draw_ticket || '0';
 
       const withdrawInfoModal = document.getElementById('withdrawInfoModal')
       const inputs = withdrawInfoModal.querySelectorAll('input')
@@ -1163,7 +1312,7 @@
       }
     }
 
-    function UpdateProfile() {
+    function updateProfile() {
       const form = document.getElementById('withdrawInfoForm')
       const contact = form.querySelector('input:nth-child(5)').value.trim()
       const securityPin = form.querySelector('input:nth-child(8)').value.trim()
@@ -1195,25 +1344,40 @@
     }
     
     async function loadCommissionData(btn) {
-    try {
-      const res = await axios.post('/orders', {}, {
-        headers: {
+      try {
+        const res = await axios.post('/orders', {}, {
+          headers: {
             Authorization: `Bearer ${token}`,
             'Accept-Language': localStorage.getItem('lang') || 'en'
           }
-      });
+        });
 
-      const pendingCommission = parseFloat(res.data?.data || 0);
-      const formatted = `$${pendingCommission.toFixed(2)}`;
+        let pendingCommission = 0;
+        let completedTasks = 0;
 
-      document.getElementById('commissionAmount').innerText = formatted;
-      btn.setAttribute('data-commission-amount', pendingCommission);
-    } catch (err) {
-      console.error('loadCommissionData error:', err);
-      alert(err.response?.data?.message || 'Failed to load commission data.');
+        if (res.data?.status) {
+          // commission
+          if (!isNaN(res.data.data)) {
+            pendingCommission = parseFloat(res.data.data || 0);
+          } else if (typeof res.data.data === 'object') {
+            pendingCommission = parseFloat(res.data.data.commission || 0);
+          }
+
+          // completed tasks (top-level)
+          if (typeof res.data.completedTasks !== 'undefined') {
+            completedTasks = res.data.completedTasks;
+          }
+        }
+
+        document.getElementById('commissionAmount').innerText = `$${pendingCommission.toFixed(2)}`;
+        document.getElementById('completedTasks').innerText = completedTasks;
+        btn.setAttribute('data-commission-amount', pendingCommission);
+      } catch (err) {
+        console.error('loadCommissionData error:', err);
+        alert(err.response?.data?.message || 'Failed to load commission data.');
+      }
     }
-  }
-
+    
     async function loadTaskRecord() {
       const token = localStorage.getItem('token')
       const res = await axios.get(`${window.location.origin}/orders`, {
@@ -1233,7 +1397,9 @@
 
       try {
         const { data } = await axios.get(`${window.location.origin}/team`, {
-          headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}`,
+            'Accept-Language': localStorage.getItem('lang') || 'en'
+          }
         });
 
         const list = data?.data || [];
@@ -1369,39 +1535,208 @@
       }
     }
 
-    let days = 7;
-    let checkedIn = Array(days).fill(false);
+    const loanModalEl = document.getElementById('loanModal');
+    loanModalEl.addEventListener('show.bs.modal', () => {
+      loadMyLoans();
+    });
 
-    function dailyCheckIn(action) {
-      const calendar = document.getElementById("checkInCalendar");
-      const btn = document.getElementById("checkInBtn");
-      const status = document.getElementById("checkInStatus");
+    async function loadMyLoans() {
+      const tbody = document.getElementById('loanTableBody');
+      tbody.innerHTML = `<tr><td colspan="4" class="text-muted">Loading...</td></tr>`;
 
-      if (action === "checkin") {
-        const idx = checkedIn.indexOf(false);
-        if (idx === -1) {
-          status.setAttribute("data-i18n", "profile.checkInStatus.allDone");
-          status.innerText = i18n.t("profile.checkInStatus.allDone");
+      try {
+        const { data } = await axios.get(`${window.location.origin}/my-loans`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const loans = data.data || [];
+        const vipTiers = data.vipTiers || {};
+
+        // 假设用户VIP等级在token里解出来
+        const decoded = JSON.parse(atob(token.split('.')[1]));
+        const userVip = decoded.vip || "BASIC";
+        const limit = vipTiers[userVip]?.loan_limit || 0;
+
+        document.getElementById('loanLimit').innerText = `$${limit.toLocaleString()}`;
+
+        if (loans.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" class="text-muted">No loans found.</td></tr>`;
           return;
         }
-        checkedIn[idx] = true;
-        btn.disabled = true;
-        btn.className = "btn btn-secondary w-100";
-        btn.setAttribute("data-i18n", "profile.checkInStatus.checked");
-        btn.innerText = i18n.t("profile.checkInStatus.checked");
-        status.setAttribute("data-i18n", "profile.checkInStatus.success");
-        status.innerText = i18n.t("profile.checkInStatus.success", { day: idx + 1 });
-      }
 
-      calendar.innerHTML = checkedIn
-        .map((done, i) =>
-          `<div class="col-1 text-center p-2 border rounded" style="min-width:40px;">
-            <div class="${done ? 'bg-success text-white' : 'bg-light'} rounded p-2">${i + 1}</div>
-          </div>`
-        ).join("");
+        tbody.innerHTML = '';
+        loans.forEach(loan => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${loan.id}</td>
+            <td>${new Date(loan.created_at).toLocaleString()}</td>
+            <td class="text-primary">$${parseFloat(loan.amount).toFixed(2)}</td>
+            <td><span class="badge ${
+              loan.status === 'approved' ? 'bg-success' :
+              loan.status === 'pending' ? 'bg-warning text-dark' : 'bg-danger'
+            }">${loan.status}</span></td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-danger">Error loading loans</td></tr>`;
+        console.error('loadMyLoans error:', err);
+      }
     }
 
-    dailyCheckIn();
+    async function submitLoan() {
+      const amountInput = document.getElementById('loanAmountInput');
+      const pinInput = document.querySelector('#loanForm input[type="password"]');
+
+      const amount = amountInput.value;
+      const pin = pinInput.value;
+
+      try {
+        const { data } = await axios.post(`${window.location.origin}/loan-requests`, {
+          amount, pin
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (data.status) {
+          alert('Loan request submitted successfully');
+
+          // 刷新列表
+          loadMyLoans();
+
+          // 清空输入
+          amountInput.value = '';
+          pinInput.value = '';
+
+          // 关闭 modal
+          const loanModalEl = document.getElementById('loanModal');
+          const modalInstance = bootstrap.Modal.getInstance(loanModalEl) 
+                              || new bootstrap.Modal(loanModalEl);
+          modalInstance.hide();
+
+        } else {
+          alert(data.message || 'Loan request failed');
+        }
+
+      } catch (err) {
+        alert('Error submitting loan');
+        console.error('submitLoan error:', err);
+      }
+    }
+
+    async function dailyCheckIn(action) {
+      const calendar = document.getElementById("checkInCalendar");
+      const progress = document.getElementById("checkInProgress");
+      const status = document.getElementById("checkInStatus");
+
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const todayIndex = now.getDate();
+
+      // backend call
+      let checkinData;
+      const res = await axios.get(`${window.location.origin}/checkin`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Accept-Language": localStorage.getItem("lang") || "en"
+        }
+      });
+      checkinData = res.data;
+
+      const { todayCycles = 0, requiredCycles = 2, checkedDays = [], todayChecked = false } = checkinData.data || {};
+      const checkedSet = new Set(checkedDays);
+
+      if (todayChecked) {
+        status.setAttribute("data-i18n", "profile.checkInStatus.allDone");
+      } else if (todayCycles < requiredCycles) {
+        status.setAttribute("data-i18n", "profile.checkInStatus.need2cycle");
+      } else {
+        status.setAttribute("data-i18n", "profile.checkInStatus.success");
+      }
+
+      if (action === "checkin") {
+        await axios.post(`${window.location.origin}/checkin`, {}, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Accept-Language": localStorage.getItem("lang") || "en"
+          }
+        });
+        checkedSet.add(todayIndex);
+        status.setAttribute("data-i18n", "profile.checkInStatus.success");
+      }
+
+      // Month + year label
+      const monthTitle = now.toLocaleString("default", { month: "long", year: "numeric" });
+      const weekdayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+      let html = "";
+      html += `<div style="width:100%; max-width:520px; margin:0 auto; box-sizing:border-box;">`;
+      html += `<div class="d-flex justify-content-between align-items-center mb-1">`;
+      html += `<strong style="font-size:0.95rem;">${monthTitle}</strong>`;
+      html += `</div>`;
+      html += `<div class="d-flex border bg-light fw-bold py-1 mb-2" style="font-size:0.75rem;">`;
+      for (const wd of weekdayNames) {
+        html += `<div class="flex-fill text-center py-1">${wd}</div>`;
+      }
+      html += `</div>`;
+
+      // grid
+      html += `<div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; font-size:0.78rem;">`;
+
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const firstDay = new Date(year, month, 1).getDay();
+      for (let i = 0; i < firstDay; i++) {
+        html += `<div style="padding:4px;"></div>`;
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const isToday = d === todayIndex;
+        const isChecked = checkedSet.has(d);
+        const innerCls = isChecked ? "bg-success text-white" : "bg-light";
+        html +=
+          `<div class="text-center border rounded" style="min-height:44px; padding:4px;" data-day="${d}">
+            <div class="${innerCls} rounded h-100 d-flex flex-column justify-content-between" style="padding:6px;">
+              <div class="d-flex justify-content-between align-items-start">
+                <small class="fw-bold" style="font-size:0.85rem;">${d}</small>
+                <span style="font-size:0.85rem;">${isChecked ? "✔" : "&nbsp;"}</span>
+              </div>
+              <div class="small text-muted" data-i18n="${isToday ? "profile.checkInLabel.today" : ""}">
+                ${isToday ? "Today" : "&nbsp;"}
+              </div>
+            </div>
+          </div>`;
+      }
+
+      const totalCells = firstDay + daysInMonth;
+      const pad = (7 - (totalCells % 7)) % 7;
+      for (let i = 0; i < pad; i++) {
+        html += `<div style="padding:4px;"></div>`;
+      }
+
+      html += `</div>`; // grid
+      html += `</div>`; // container
+
+      calendar.innerHTML = html;
+
+      // progress text
+      progress.innerText = `Progress: ${todayCycles}/${requiredCycles}`;
+
+      // click only today cell if valid
+      calendar.querySelectorAll("[data-day]").forEach(el => {
+        const day = Number(el.getAttribute("data-day"));
+        el.onclick = null;
+        if (day === todayIndex && !todayChecked && todayCycles >= requiredCycles) {
+          el.style.cursor = "pointer";
+          el.title = "Click to check in for today";
+          el.addEventListener("click", () => dailyCheckIn("checkin"));
+        } else {
+          el.style.cursor = "default";
+          el.title = "";
+        }
+      });
+    }
 
     function Logout() {
       localStorage.removeItem("token");
@@ -1575,6 +1910,234 @@
       reader.readAsDataURL(file);
     });
 
+    const luckyDrawModal = document.getElementById('luckyDrawModal');
+    const resultCard = document.getElementById('luckyResultCard');
+
+    luckyDrawModal.addEventListener('hidden.bs.modal', () => {
+      if(resultCard) resultCard.style.display = 'none';
+    });
+
+    async function initLuckyDraw(userId) {
+      const canvas = document.getElementById('luckyWheelCanvas');
+      const spinBtn = document.getElementById('luckySpinBtn');
+      const ticketEl = document.getElementById('luckyDrawTicket');
+      const resultCard = document.getElementById('luckyResultCard');
+      const resultText = document.getElementById('luckyResult');
+
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const radius = Math.min(cx, cy);
+
+      // gradient color pairs (5)
+      const colors = [
+        ['#ff7b7b', '#ff1a1a'], // red
+        ['#6ee77c', '#2e7d32'], // green
+        ['#7b8cff', '#1a3dff'], // blue
+        ['#ffe97b', '#ffb01a'], // yellow
+        ['#ff9df5', '#d61aff']  // purple
+      ];
+
+      let prizes = [];
+      let spinning = false;
+      let rotation = 0;
+
+      function drawWheel() {
+        const total = Math.max(prizes.length, 1);
+        const slice = (2 * Math.PI) / total;
+
+        ctx.clearRect(0, 0, w, h);
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rotation);
+
+        for (let i = 0; i < total; i++) {
+          const start = i * slice;
+          const end = start + slice;
+
+          // radial gradient centered
+          const g = ctx.createRadialGradient(0, 0, radius * 0.2, 0, 0, radius);
+          const c = colors[i % colors.length];
+          g.addColorStop(0, c[0]);
+          g.addColorStop(1, c[1]);
+
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.arc(0, 0, radius - 4, start, end);
+          ctx.closePath();
+          ctx.fillStyle = g;
+          ctx.fill();
+
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = '#222';
+          ctx.stroke();
+
+          // black label near outer edge (small, clipped if empty)
+          const label = prizes[i] || '';
+          if (label) {
+            ctx.save();
+            ctx.rotate(start + slice / 2);
+            ctx.fillStyle = 'black';
+            ctx.font = `${Math.max(Math.floor(radius * 0.07), 11)}px sans-serif`;
+            ctx.textAlign = 'right';
+            // draw truncated label if too long
+            let text = label;
+            const maxWidth = radius - 18;
+            while (ctx.measureText(text).width > maxWidth && text.length > 1) text = text.slice(0, -1);
+            ctx.fillText(text, radius - 10, 5);
+            ctx.restore();
+          }
+        }
+
+        ctx.restore();
+
+        // center decoration (circle)
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.max(22, radius * 0.12), 0, Math.PI * 2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#c33';
+        ctx.stroke();
+
+        // top pointer (fixed, not rotated) - triangle
+        ctx.beginPath();
+        ctx.moveTo(cx - 12, cy - radius + 8);
+        ctx.lineTo(cx + 12, cy - radius + 8);
+        ctx.lineTo(cx, cy - radius + 32);
+        ctx.closePath();
+        ctx.fillStyle = '#000';
+        ctx.fill();
+      }
+
+      // enable/disable spin control (spinBtn might be <img> or <button>)
+      function enableSpin(flag) {
+        if (!spinBtn) return;
+        if (flag) {
+          spinBtn.style.opacity = '1';
+          spinBtn.style.pointerEvents = 'auto';
+        } else {
+          spinBtn.style.opacity = '0.5';
+          spinBtn.style.pointerEvents = 'none';
+        }
+      }
+
+      // compute final rotation angle so slice `idx` aligns with top pointer (pointer at -PI/2)
+      function computeFinalRotation(idx) {
+        const total = Math.max(prizes.length, 1);
+        const slice = (2 * Math.PI) / total;
+        // Want middle angle of slice to equal -PI/2 after rotation:
+        // finalRotation + (idx*slice + slice/2) = -PI/2  (mod 2PI)
+        // choose large number of full turns for visual (e.g., 4)
+        const base = -Math.PI / 2 - (idx * slice + slice / 2);
+        // add multiple full turns to make it spin
+        return base + (Math.PI * 8); // 4 full turns = 8π
+      }
+
+      // animate rotation from current rotation to targetRotation
+      function animateTo(targetRotation, duration = 4200) {
+        const startRotation = rotation;
+        const startTime = performance.now();
+        return new Promise(resolve => {
+          (function frame(now) {
+            const t = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+            rotation = startRotation + (targetRotation - startRotation) * eased;
+            drawWheel();
+            if (t < 1) requestAnimationFrame(frame);
+            else resolve();
+          })(startTime);
+        });
+      }
+
+      // spin handler
+      async function spinWheel() {
+        if (spinning) return;
+        const tickets = parseInt(ticketEl?.innerText || '0', 10) || 0;
+        if (tickets < 1) {
+          alert('No tickets');
+          return;
+        }
+        if (prizes.length === 0) {
+          alert('No prizes loaded');
+          return;
+        }
+
+        spinning = true;
+        enableSpin(false);
+        resultCard.style.display = 'none';
+
+        try {
+          // call backend spin endpoint
+          const postBody = (typeof userId !== 'undefined') ? { username: userId } : {};
+          const res = await axios.post(`${window.location.origin}/lucky_draw_spin`, postBody, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (!res.data || !res.data.status) throw new Error(res.data?.message || 'Spin error');
+
+          // backend returns prize name (string) in data
+          const prize = String(res.data.data || '');
+          const idx = prizes.findIndex(p => String(p || '').trim() === prize.trim());
+          if (idx < 0) {
+            // if not found, fallback to random index
+            console.warn('Prize from server not found in local list, picking random index');
+            idx = Math.floor(Math.random() * prizes.length);
+          }
+
+          // consume ticket
+          ticketEl.innerText = String(Math.max(0, tickets - 1));
+
+          // compute target and animate
+          const final = computeFinalRotation(idx);
+          await animateTo(final, 4200);
+
+          // ensure rotation normalized
+          rotation = final % (2 * Math.PI);
+          drawWheel();
+
+          // show result
+          resultText.innerText = `🎉 You won: ${prize}!`;
+          resultCard.style.display = 'block';
+        } catch (err) {
+          console.error('Lucky draw spin error', err);
+          alert(err.message || 'Spin failed');
+        } finally {
+          spinning = false;
+          enableSpin(true);
+        }
+      }
+
+      // load prizes from backend
+      async function loadPrizes() {
+        enableSpin(false);
+        try {
+          const res = await axios.get(`${window.location.origin}/lucky_draw_rates`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (!res.data || !res.data.status) throw new Error(res.data?.message || 'Failed to load prizes');
+          prizes = Array.isArray(res.data.data) ? res.data.data.map(i => String(i.name || i)) : [];
+        } catch (err) {
+          console.error('loadPrizes error', err);
+          prizes = [];
+        } finally {
+          drawWheel();
+          enableSpin(prizes.length > 0);
+        }
+      }
+
+      // attach spin event (works whether element is <img> or <button>)
+      if (spinBtn) {
+        spinBtn.style.cursor = 'pointer';
+        spinBtn.onclick = spinWheel;
+      }
+
+      // initial draw (empty) and load prizes
+      drawWheel();
+      await loadPrizes();
+    }
   </script>
 </body>
 </html>
