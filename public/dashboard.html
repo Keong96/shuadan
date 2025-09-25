@@ -2000,7 +2000,6 @@
         const slice = (2 * Math.PI) / total;
 
         ctx.clearRect(0, 0, w, h);
-
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(rotation);
@@ -2009,7 +2008,6 @@
           const start = i * slice;
           const end = start + slice;
 
-          // radial gradient centered
           const g = ctx.createRadialGradient(0, 0, radius * 0.2, 0, 0, radius);
           const c = colors[i % colors.length];
           g.addColorStop(0, c[0]);
@@ -2026,7 +2024,6 @@
           ctx.strokeStyle = '#222';
           ctx.stroke();
 
-          // black label near outer edge (small, clipped if empty)
           const label = prizes[i] || '';
           if (label) {
             ctx.save();
@@ -2034,7 +2031,6 @@
             ctx.fillStyle = 'black';
             ctx.font = `${Math.max(Math.floor(radius * 0.07), 11)}px sans-serif`;
             ctx.textAlign = 'right';
-            // draw truncated label if too long
             let text = label;
             const maxWidth = radius - 18;
             while (ctx.measureText(text).width > maxWidth && text.length > 1) text = text.slice(0, -1);
@@ -2045,7 +2041,6 @@
 
         ctx.restore();
 
-        // center decoration (circle)
         ctx.beginPath();
         ctx.arc(cx, cy, Math.max(22, radius * 0.12), 0, Math.PI * 2);
         ctx.fillStyle = '#fff';
@@ -2054,7 +2049,6 @@
         ctx.strokeStyle = '#c33';
         ctx.stroke();
 
-        // top pointer (fixed, not rotated) - triangle
         ctx.beginPath();
         ctx.moveTo(cx - 12, cy - radius + 8);
         ctx.lineTo(cx + 12, cy - radius + 8);
@@ -2064,38 +2058,26 @@
         ctx.fill();
       }
 
-      // enable/disable spin control (spinBtn might be <img> or <button>)
       function enableSpin(flag) {
         if (!spinBtn) return;
-        if (flag) {
-          spinBtn.style.opacity = '1';
-          spinBtn.style.pointerEvents = 'auto';
-        } else {
-          spinBtn.style.opacity = '0.5';
-          spinBtn.style.pointerEvents = 'none';
-        }
+        spinBtn.style.opacity = flag ? '1' : '0.5';
+        spinBtn.style.pointerEvents = flag ? 'auto' : 'none';
       }
 
-      // compute final rotation angle so slice `idx` aligns with top pointer (pointer at -PI/2)
       function computeFinalRotation(idx) {
         const total = Math.max(prizes.length, 1);
         const slice = (2 * Math.PI) / total;
-        // Want middle angle of slice to equal -PI/2 after rotation:
-        // finalRotation + (idx*slice + slice/2) = -PI/2  (mod 2PI)
-        // choose large number of full turns for visual (e.g., 4)
         const base = -Math.PI / 2 - (idx * slice + slice / 2);
-        // add multiple full turns to make it spin
-        return base + (Math.PI * 8); // 4 full turns = 8π
+        return base + Math.PI * 8;
       }
 
-      // animate rotation from current rotation to targetRotation
       function animateTo(targetRotation, duration = 4200) {
         const startRotation = rotation;
         const startTime = performance.now();
         return new Promise(resolve => {
           (function frame(now) {
             const t = Math.min((now - startTime) / duration, 1);
-            const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+            const eased = 1 - Math.pow(1 - t, 3);
             rotation = startRotation + (targetRotation - startRotation) * eased;
             drawWheel();
             if (t < 1) requestAnimationFrame(frame);
@@ -2104,54 +2086,64 @@
         });
       }
 
-      // spin handler
+      // confetti
+      function launchConfetti() {
+        if (typeof confetti === 'undefined') return;
+        const duration = 2 * 1000;
+        const end = Date.now() + duration;
+        (function frame() {
+          confetti({
+            particleCount: 5,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 }
+          });
+          confetti({
+            particleCount: 5,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 }
+          });
+          if (Date.now() < end) requestAnimationFrame(frame);
+        })();
+      }
+
       async function spinWheel() {
         if (spinning) return;
         const tickets = parseInt(ticketEl?.innerText || '0', 10) || 0;
-        if (tickets < 1) {
-          alert('No tickets');
-          return;
-        }
-        if (prizes.length === 0) {
-          alert('No prizes loaded');
-          return;
-        }
+        if (tickets < 1) { alert('No tickets'); return; }
+        if (prizes.length === 0) { alert('No prizes loaded'); return; }
 
         spinning = true;
         enableSpin(false);
         resultCard.style.display = 'none';
 
         try {
-          // call backend spin endpoint
           const postBody = (typeof userId !== 'undefined') ? { username: userId } : {};
           const res = await axios.post(`${window.location.origin}/lucky_draw_spin`, postBody, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (!res.data || !res.data.status) throw new Error(res.data?.message || 'Spin error');
 
-          // backend returns prize name (string) in data
-          const prize = String(res.data.data || '');
-          const idx = prizes.findIndex(p => String(p || '').trim() === prize.trim());
+          let prize = String(res.data.data || '');
+          let idx = prizes.findIndex(p => String(p || '').trim() === prize.trim());
           if (idx < 0) {
-            // if not found, fallback to random index
-            console.warn('Prize from server not found in local list, picking random index');
+            console.warn('Prize from server not found, picking random index');
             idx = Math.floor(Math.random() * prizes.length);
+            prize = prizes[idx];
           }
 
-          // consume ticket
           ticketEl.innerText = String(Math.max(0, tickets - 1));
 
-          // compute target and animate
           const final = computeFinalRotation(idx);
           await animateTo(final, 4200);
 
-          // ensure rotation normalized
           rotation = final % (2 * Math.PI);
           drawWheel();
 
-          // show result
           resultText.innerText = `🎉 You won: ${prize}!`;
           resultCard.style.display = 'block';
+          launchConfetti(); // <- 礼炮效果
         } catch (err) {
           console.error('Lucky draw spin error', err);
           alert(err.message || 'Spin failed');
@@ -2161,7 +2153,6 @@
         }
       }
 
-      // load prizes from backend
       async function loadPrizes() {
         enableSpin(false);
         try {
@@ -2179,17 +2170,15 @@
         }
       }
 
-      // attach spin event (works whether element is <img> or <button>)
       if (spinBtn) {
         spinBtn.style.cursor = 'pointer';
         spinBtn.onclick = spinWheel;
       }
 
-      // initial draw (empty) and load prizes
       drawWheel();
       await loadPrizes();
     }
-    
+
     function marquee() {
       const users = ['User******3167', 'User******4298', 'User******1023', 'User******7845'];
       const types = ['Withdrawal', 'Deposit'];
