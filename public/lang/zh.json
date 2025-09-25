@@ -54,24 +54,16 @@
   "nav.records": "记录",
   "nav.profile": "我的",
 
-  "section.home.announcement.title": "电子商务开发公司",
-  "section.home.announcement.subtitle": "与 Emarsys 一起开启全新电商机会",
-  "section.home.announcement.desc": "用创新方案、定制策略与技术实力赋能您的业务",
+  "section.home.announcement.title": "沃尔玛公司 (NYSE: WMT)",
+  "section.home.announcement.subtitle": "成立于1962年，总部位于阿肯色州本顿维尔",
+  "section.home.announcement.desc": "沃尔玛是全球最大的零售商，致力于其使命“帮助人们节省开支，让生活更美好”。",
 
-  "section.home.mission.title": "我们的使命",
-  "section.home.mission.desc": "激励企业放眼未来，勇攀数字高峰，凭借我们的专业、热情与幽默力量",
+  "section.home.mission.title": "全球布局与规模",
+  "section.home.mission.desc": "沃尔玛在19个国家拥有超过10,500家门店，全球雇佣约210万名员工，2023财年收入超过6,000亿美元。",
 
-  "section.home.expertise.title": "实力数据",
-  "section.home.expertise.clients": "客户",
-  "section.home.expertise.team": "团队成员",
-  "section.home.expertise.nps": "客户推荐分",
-  "section.home.expertise.projects": "项目数量",
-
-  "section.home.services.title": "我们的服务",
-  "section.home.services.item1": "电商全链路：从起步到扩展，始终陪伴。",
-  "section.home.services.item2": "定制开发：将您的构想变为现实。",
-  "section.home.services.item3": "开发者外包：用 Smartosc 专家增强团队。",
-  "section.home.services.item4": "移动开发：打造吸引用户的创新应用。",
+  "section.home.services.title": "业务与市场概览",
+  "section.home.services.item1": "业务板块：公司运营包括沃尔玛美国、沃尔玛国际、山姆会员店以及电子商务与数字平台，为客户提供线上线下购物体验。",
+  "section.home.services.item2": "市场地位：作为全球收入最高的公司及世界上最大的私人雇主，沃尔玛通过规模、创新、可持续发展和数字化转型持续引领全球零售业。",
 
   "section.home.testimonials.title": "客户评价",
   "section.home.testimonials.review1.text": "与这个团队合作是转折点！可靠、有创意，总是领先一步。",

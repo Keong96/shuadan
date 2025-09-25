@@ -54,24 +54,16 @@
   "nav.records": "Records",
   "nav.profile": "Profile",
 
-  "section.home.announcement.title": "Ecommerce Development Company",
-  "section.home.announcement.subtitle": "Unlock New eCommerce Opportunities with Emarsys",
-  "section.home.announcement.desc": "Empowering Your Business with Innovative Solutions, Tailored Strategies, and Technical Excellence",
+  "section.home.announcement.title": "Walmart Inc. (NYSE: WMT)",
+  "section.home.announcement.subtitle": "Established in 1962 and headquartered in Bentonville, Arkansas",
+  "section.home.announcement.desc": "Walmart is the world’s largest retailer dedicated to its mission “to save people money so they can live better.”",
 
-  "section.home.mission.title": "Our Mission",
-  "section.home.mission.desc": "Inspiring businesses to dream big and scale new horizons in the digital landscape, armed with our expertise, passion, and touch of gentle humor.",
-
-  "section.home.expertise.title": "Expertise in Numbers",
-  "section.home.expertise.clients": "Clients",
-  "section.home.expertise.team": "Team Members",
-  "section.home.expertise.nps": "Customer NPS",
-  "section.home.expertise.projects": "Projects",
-
-  "section.home.services.title": "Our Services",
-  "section.home.services.item1": "E-commerce End-to-End: From start-up to scale-up, we are with you at every phase.",
-  "section.home.services.item2": "Custom Development: Tailored solutions that bring your vision to life.",
-  "section.home.services.item3": "Developers for Hire: Reinforce your team with Smartosc experts.",
-  "section.home.services.item4": "Mobile Development: Build innovative apps that captivate users.",
+  "section.home.mission.title": "Global Presence & Scale",
+  "section.home.mission.desc": "Walmart operates more than 10,500 stores in 19 countries, employs approximately 2.1 million associates worldwide, and reported over $600 billion in revenue for fiscal year 2023.",
+  
+  "section.home.services.title": "Business & Market Overview",
+  "section.home.services.item1": "Business Segments: The company’s operations include Walmart U.S., Walmart International, Sam’s Club, and E-commerce & Digital Platforms, offering customers both in-store and online shopping experiences.",
+  "section.home.services.item2": "Market Position: Recognized as the largest company by revenue and the world’s largest private employer, Walmart continues to lead global retail through scale, innovation, sustainability, and digital transformation.",
 
   "section.home.testimonials.title": "Customer Reviews",
   "section.home.testimonials.review1.text": "Working with this team was a game changer! Reliable, creative, and always one step ahead.",

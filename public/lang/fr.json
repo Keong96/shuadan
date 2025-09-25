@@ -54,24 +54,16 @@
   "nav.records": "Historique",
   "nav.profile": "Profil",
 
-  "section.home.announcement.title": "Société de développement e-commerce",
-  "section.home.announcement.subtitle": "Démarrez de nouvelles opportunités e-commerce avec Emarsys",
-  "section.home.announcement.desc": "Des solutions innovantes, des stratégies personnalisées et une expertise technologique pour dynamiser votre entreprise",
+  "section.home.announcement.title": "Walmart Inc. (NYSE : WMT)",
+  "section.home.announcement.subtitle": "Fondée en 1962 et basée à Bentonville, Arkansas",
+  "section.home.announcement.desc": "Walmart est le plus grand détaillant au monde, dédié à sa mission « aider les gens à économiser de l’argent pour mieux vivre ».",
 
-  "section.home.mission.title": "Notre mission",
-  "section.home.mission.desc": "Inspirer les entreprises à viser l’avenir, à atteindre de nouveaux sommets numériques grâce à notre expertise, notre passion et notre humour",
+  "section.home.mission.title": "Présence et envergure mondiales",
+  "section.home.mission.desc": "Walmart exploite plus de 10 500 magasins dans 19 pays, emploie environ 2,1 millions de collaborateurs dans le monde et a généré plus de 600 milliards de dollars de chiffre d’affaires pour l’exercice 2023.",
 
-  "section.home.expertise.title": "Nos chiffres",
-  "section.home.expertise.clients": "Clients",
-  "section.home.expertise.team": "Membres de l’équipe",
-  "section.home.expertise.nps": "Score de recommandation client",
-  "section.home.expertise.projects": "Nombre de projets",
-
-  "section.home.services.title": "Nos services",
-  "section.home.services.item1": "Chaîne e-commerce complète : de la création à la croissance.",
-  "section.home.services.item2": "Développement sur mesure : transformez vos idées en réalité.",
-  "section.home.services.item3": "Externalisation : renforcez votre équipe avec des experts Smartosc.",
-  "section.home.services.item4": "Développement mobile : créez des applications innovantes et attractives.",
+  "section.home.services.title": "Aperçu des activités et du marché",
+  "section.home.services.item1": "Segments d’activité : Les opérations de l’entreprise incluent Walmart U.S., Walmart International, Sam’s Club et E-commerce & Digital Platforms, offrant aux clients des expériences d’achat en magasin et en ligne.",
+  "section.home.services.item2": "Position sur le marché : Reconnu comme la plus grande entreprise par chiffre d’affaires et le plus grand employeur privé au monde, Walmart continue de diriger le commerce de détail mondial grâce à son envergure, son innovation, sa durabilité et sa transformation numérique.",
 
   "section.home.testimonials.title": "Avis clients",
   "section.home.testimonials.review1.text": "Collaborer avec cette équipe a été un tournant ! Fiable, créative et toujours en avance.",
