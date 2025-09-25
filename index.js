@@ -708,6 +708,10 @@ app.post('/withdraw', verifyToken, async (req, res) => {
     if (balance < amount)
       return res.status(200).json({ status: false, message: t('error.insufficientBalance') });
 
+    // 保留最少 100 USD
+    if (balance - amount < 100)
+      return res.status(200).json({ status: false, message: t('error.minBalance') });
+
     // 插入 transaction
     await client.query(`
       INSERT INTO transactions (user_id, amount, type, status, remark)

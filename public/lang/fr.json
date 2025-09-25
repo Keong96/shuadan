@@ -223,6 +223,7 @@
   "success.register": "Inscription réussie",
   "error.userNotFound": "Utilisateur introuvable.",
   "error.insufficientBalance": "Solde insuffisant.",
+  "error.minBalance": "Vous devez garder au moins 100 $ dans votre portefeuille",
   "error.pinRequired": "Veuillez entrer le code PIN.",
   "error.invalidPin": "Code PIN invalide.",
   "error.invalidAmount": "Veuillez entrer un montant valide.",

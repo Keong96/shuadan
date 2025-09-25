@@ -40,7 +40,12 @@
   "eula.section5.title": "5. Changes to Agreement",
   "eula.section5.text": "We reserve the right to update or modify this Agreement at any time. Continued use of the application constitutes acceptance of the updated terms.",
 
-  
+  "eula.title": "End User License Agreement",
+  "eula.close": "Close",
+  "eula.accept": "Accept",
+  "register.eula.notice": "By registering, you agree to the",
+  "register.eula.link": "End User License Agreement",
+
   "footer.rights": "All rights reserved",
 
   "nav.home": "Home",
@@ -218,6 +223,7 @@
   "success.register": "Registration successful",
   "error.userNotFound": "User not found.",
   "error.insufficientBalance": "Insufficient balance.",
+  "error.minBalance": "You must keep at least $100 in your wallet",
   "error.pinRequired": "Security PIN is required.",
   "error.invalidPin": "Invalid security PIN.",
   "error.invalidAmount": "Invalid withdrawal amount.",

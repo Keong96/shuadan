@@ -223,6 +223,7 @@
   "success.register": "注册成功",
   "error.userNotFound": "用户不存在。",
   "error.insufficientBalance": "余额不足。",
+  "error.minBalance": "钱包中必须保留至少 100 美元",
   "error.pinRequired": "请输入安全密码。",
   "error.invalidPin": "安全密码错误。",
   "error.invalidAmount": "请输入有效的提现金额。",

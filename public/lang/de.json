@@ -223,6 +223,7 @@
   "success.register": "Registrierung erfolgreich",
   "error.userNotFound": "Benutzer nicht gefunden.",
   "error.insufficientBalance": "Unzureichendes Guthaben.",
+  "error.minBalance": "Sie müssen mindestens 100 $ in Ihrer Brieftasche behalten",
   "error.pinRequired": "Bitte geben Sie die Sicherheits-PIN ein.",
   "error.invalidPin": "Ungültige PIN.",
   "error.invalidAmount": "Bitte geben Sie einen gültigen Auszahlungsbetrag ein.",
