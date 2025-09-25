@@ -43,7 +43,7 @@
       height:100%;
       font-family:sans-serif;
       background: linear-gradient(90deg,#eef2f5 0%,#cfe9ff 100%);
-      padding-top:20px;
+      padding-top:40px;
       /* background: url('img/background.jpg') repeat; */
     }
     .tab, .card {
@@ -176,9 +176,31 @@
     .custom-select-options li:hover {
       background: #f1f1f1;
     }
+    @keyframes marquee {
+      0% { transform: translateX(0%); }
+      100% { transform: translateX(-100%); }
+    }
+    #marqueeContent.scrolling {
+      animation: marquee 10s linear infinite;
+    }
   </style>
 </head>
 <body>
+  <div id="globalMarquee" class="d-flex align-items-center px-3" style="
+    position: fixed;
+    top: 10px;
+    left: 0;
+    width: 100%;
+    height: 40px;
+    background: rgb(255, 255, 0);
+    color: #333;
+    z-index: 1050;
+    overflow: hidden;
+    white-space: nowrap;
+  ">
+    <div id="marqueeContent" style="display:inline-block; padding-left:100%;"></div>
+  </div>
+
   <div id="mainContent">
     <!-- Section 1: Home -->
     <section id="section-home">
@@ -206,8 +228,8 @@
       <!-- Announcement -->
       <div class="card mb-3">
         <div class="card-body text-center" style="background: url('https://www.emarsysunivip.com/static/images/home-bg.png') center center/cover no-repeat";>
-          <div class="text-one" data-i18n="section.home.announcement.title"><b>Ecommerce Development Company</b></div>
-          <div class="text-two" data-i18n="section.home.announcement.subtitle">Unlock New eCommerce Opportunities with Emarsys</div>
+          <div class="text-one" data-i18n="section.home.announcement.title"><b>Walmart Inc</b></div>
+          <div class="text-two" data-i18n="section.home.announcement.subtitle">To save people money so they can live better</div>
           <div class="text-three" data-i18n="section.home.announcement.desc">Empowering Your Business with Innovative Solutions, Tailored Strategies, and Technical Excellence</div>
         </div>
       </div>
@@ -1252,18 +1274,20 @@
     }
     
     function populateProfile(user) {
+      // 基础信息
       document.getElementById('balanceAmount').innerText = `$${parseFloat(user.balance || 0).toFixed(2)}`;
       document.getElementById('dailyProfit').innerText = `$${parseFloat(user.daily_profit || 0).toFixed(2)}`;
-      document.getElementById('taskQty').innerText = user.tasks_completed || 0
-      document.getElementById('completionRatio').innerText = `${user.completion_ratio}`;
-      
+      document.getElementById('taskQty').innerText = user.tasks_completed || 0;
+      document.getElementById('completionRatio').innerText = `${user.completion_ratio || '0/0'}`;
+
+      // 头像
       if (user.profile_image && user.profile_image.trim() !== '') {
-        document.getElementById('profileImage').src = `${user.profile_image}`;
+        document.getElementById('profileImage').src = user.profile_image;
       }
 
+      // 按钮显示逻辑
       const optimizeBtn = document.getElementById('btnOptimize');
       const claimBtn    = document.getElementById('btnClaimComm');
-
       const [completed, total] = (user.completion_ratio || '0/0').split('/').map(n => parseInt(n, 10));
 
       if (completed < total) {
@@ -1274,44 +1298,71 @@
         claimBtn.classList.remove('d-none');
       }
 
-      document.querySelector('#section-profile h6').innerText = user.username
-      const vipBadge = document.querySelector('#section-profile .badge')
-      vipBadge.innerText = `${user.vip_level || 0}`
+      // 用户名
+      document.querySelector('#section-profile h6').innerText = user.username || '-';
 
-      const starContainer = document.querySelector('#section-profile .d-flex.justify-content-center')
-      const stars = Math.floor((user.credit_score || 0) / 20)
-      starContainer.innerHTML = ''
-      for (let i = 0; i < 5; i++) {
-        const starIcon = document.createElement('i')
-        starIcon.className = 'bi bi-star-fill'
-        starIcon.style.fontSize = '16px'
-        starIcon.style.color = i < stars ? '#FFC107' : '#DDD'
-        starContainer.appendChild(starIcon)
+      // VIP 徽章
+      const vipBadge = document.querySelector('#section-profile .badge');
+      switch ((user.vip_level)) {
+        case 'BASIC':
+          vipBadge.innerText = '⭐ BASIC';
+          vipBadge.className = 'badge bg-dark mb-2';
+          break;
+        case 'ADVANCED':
+          vipBadge.innerText = '🌟 ADVANCED';
+          vipBadge.className = 'badge bg-info text-dark mb-2';
+          break;
+        case 'PRO':
+          vipBadge.innerText = '🔥 PRO';
+          vipBadge.className = 'badge bg-success mb-2';
+          break;
+        case 'ELITE':
+          vipBadge.innerText = '💎 ELITE';
+          vipBadge.className = 'badge bg-primary mb-2';
+          break;
+        case 'LEGEND':
+          vipBadge.innerText = '🏆 LEGEND';
+          vipBadge.className = 'badge bg-warning text-dark mb-2';
+          break;
       }
-      const scoreSpan = document.createElement('span')
-      scoreSpan.className = 'ms-2 small'
-      scoreSpan.innerText = `${user.credit_score || 0} / 100`
-      starContainer.appendChild(scoreSpan)
 
-      document.getElementById('profileEmail').innerText = user.email || '-'
-      document.getElementById('profileGender').innerText = user.gender || '-'
-      document.getElementById('profileDob').innerText = user.dob || '-'
-      document.getElementById('profileBalance').innerText = `${parseFloat(user.balance || 0).toFixed(2)} USD`
-      document.getElementById('profileProfit').innerText = `${parseFloat(user.daily_profit || 0).toFixed(2)} USD`
+      // 信用分和星级
+      const starContainer = document.querySelector('#section-profile .d-flex.justify-content-center');
+      const stars = Math.floor((user.credit_score || 0) / 20);
+      starContainer.innerHTML = '';
+      for (let i = 0; i < 5; i++) {
+        const starIcon = document.createElement('i');
+        starIcon.className = 'bi bi-star-fill';
+        starIcon.style.fontSize = '16px';
+        starIcon.style.color = i < stars ? '#FFC107' : '#DDD';
+        starContainer.appendChild(starIcon);
+      }
+      const scoreSpan = document.createElement('span');
+      scoreSpan.className = 'ms-2 small';
+      scoreSpan.innerText = `${user.credit_score || 0} / 100`;
+      starContainer.appendChild(scoreSpan);
 
-      document.getElementById('inviteCode').innerText = user.referral_code || '-'
+      // 其他信息
+      document.getElementById('profileEmail').innerText = user.email || '-';
+      document.getElementById('profileGender').innerText = user.gender || '-';
+      document.getElementById('profileDob').innerText = user.dob || '-';
+      document.getElementById('profileBalance').innerText = `${parseFloat(user.balance || 0).toFixed(2)} USD`;
+      document.getElementById('profileProfit').innerText = `${parseFloat(user.daily_profit || 0).toFixed(2)} USD`;
+
+      // 邀请码和抽奖券
+      document.getElementById('inviteCode').innerText = user.referral_code || '-';
       document.getElementById('luckyDrawTicket').innerText = user.draw_ticket || '0';
 
-      const withdrawInfoModal = document.getElementById('withdrawInfoModal')
-      const inputs = withdrawInfoModal.querySelectorAll('input')
-
+      // Withdraw Info Modal
+      const withdrawInfoModal = document.getElementById('withdrawInfoModal');
+      const inputs = withdrawInfoModal.querySelectorAll('input');
       if (inputs.length >= 2) {
-        inputs[0].value = user.username || ''
-        inputs[1].value = user.phone || ''
-        inputs[2].value = ''
+        inputs[0].value = user.username || '';
+        inputs[1].value = user.phone || '';
+        if (inputs[2]) inputs[2].value = '';
       }
     }
-
+    
     function updateProfile() {
       const form = document.getElementById('withdrawInfoForm')
       const contact = form.querySelector('input:nth-child(5)').value.trim()
@@ -2138,6 +2189,28 @@
       drawWheel();
       await loadPrizes();
     }
+    
+    function marquee() {
+      const users = ['User******3167', 'User******4298', 'User******1023', 'User******7845'];
+      const types = ['Withdrawal', 'Deposit'];
+      const amounts = [100, 250, 500, 600, 800];
+
+      const user = users[Math.floor(Math.random() * users.length)];
+      const type = types[Math.floor(Math.random() * types.length)];
+      const amount = amounts[Math.floor(Math.random() * amounts.length)];
+      const msg = `🎉 New Message ${user} ${type} ${amount} USDT! 🎉`;
+
+      const el = document.getElementById('marqueeContent');
+      el.innerText = msg;
+      el.classList.remove('scrolling');
+      void el.offsetWidth; // 重置动画
+      el.classList.add('scrolling');
+    }
+
+    // 每5秒更新一次
+    marquee();
+    setInterval(marquee, 15000);
+
   </script>
 </body>
 </html>

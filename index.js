@@ -961,34 +961,34 @@ app.post('/lucky_draw_spin', verifyToken, async (req, res) => {
       'SELECT draw_ticket FROM users WHERE id=$1',
       [req.user.userId]
     );
-    if (!userRes.rows.length) 
+    if (!userRes.rows.length)
       return res.status(200).json({ status: false, message: 'User not found' });
 
     const drawTicket = userRes.rows[0].draw_ticket;
-    if (drawTicket < 1) 
+    if (drawTicket < 1)
       return res.status(200).json({ status: false, message: 'No draw tickets left' });
 
-    // fetch prize config
     const configRes = await client.query(
       "SELECT value FROM config WHERE key='lucky_draw_prizes' LIMIT 1"
     );
-    if (!configRes.rows.length) 
+    if (!configRes.rows.length)
       return res.status(500).json({ status: false, message: 'Prize config not found' });
 
     const prizes = JSON.parse(configRes.rows[0].value);
 
-    // weighted random based on rate
-    const totalRate = prizes.reduce((sum, p) => sum + (p.rate || 0), 0);
-    let rand = Math.random() * totalRate;
-    let prize;
-    for (const p of prizes) {
-      rand -= p.rate || 0;
-      if (rand <= 0) {
-        prize = p;
-        break;
+    const box = [];
+    prizes.forEach(p => {
+      const qty = Math.max(0, Math.floor(p.rate));
+      for (let i = 0; i < qty; i++) {
+        box.push(p);
       }
+    });
+
+    if (box.length === 0) {
+      return res.status(200).json({ status: false, message: 'No prizes available' });
     }
-    if (!prize) prize = prizes[prizes.length - 1]; // fallback
+
+    const prize = box[Math.floor(Math.random() * box.length)];
 
     // deduct ticket
     await client.query('UPDATE users SET draw_ticket = draw_ticket - 1 WHERE id=$1', [req.user.userId]);
@@ -1699,6 +1699,22 @@ app.get('/checkins/:id', verifyAdminToken, async (req, res) => {
   } catch (err) {
     console.error('Error fetching checkins:', err);
     res.status(500).json({ status: false, message: 'Failed to fetch checkins' });
+  }
+});
+
+app.get('/draw_record', verifyAdminToken, async (req, res) => {
+  try {
+    const { rows } = await client.query(`
+      SELECT u.username, d.prize_name, d.created_at
+      FROM draw_records d
+      JOIN users u ON u.id = d.user_id
+      ORDER BY d.created_at DESC
+    `);
+
+    res.json({ status: true, data: rows });
+  } catch (err) {
+    console.error('Error fetching draw records:', err);
+    res.status(500).json({ status: false, message: 'Failed to fetch draw records' });
   }
 });
 
