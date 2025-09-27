@@ -177,14 +177,14 @@
   "comment.option.quality": "Haute qualité, fortement recommandé.",
   "comment.option.custom": "Autre...",
 
-  "modal.info.title": "Information",
-  "modal.info.dailyProfit.question": "Qu’est-ce que le gain quotidien ?",
-  "modal.info.dailyProfit.answer": "Le système calcule automatiquement vos gains quotidiens",
-  "modal.info.assetBalance.question": "Qu’est-ce que le solde des actifs ?",
-  "modal.info.assetBalance.answer": "Les gains sont automatiquement ajoutés au solde",
-  "modal.info.onHold.question": "Qu’est-ce que le montant en attente ?",
-  "modal.info.onHold.answer": "Ce montant est temporairement suspendu et sera crédité après validation",
-
+  "modal.info.title": "Règles Utilisateur de la Plateforme",
+  "modal.info.rule1": "1. Achèvement des tâches quotidiennes\nLes utilisateurs doivent compléter 2 séries de commandes par jour pour que la journée compte comme une journée de connexion valide. Après une journée de connexion valide, les utilisateurs recevront un salaire de base supplémentaire versé par la plateforme.",
+  "modal.info.rule2": "2. Adhésion VIP et Commission\nChaque niveau VIP bénéficie de taux de commission différents et d’avantages exclusifs.\n- Par exemple : Passer au niveau VIP1 débloque 5 tâches quotidiennes supplémentaires, augmentant ainsi le potentiel global de gains.",
+  "modal.info.rule3": "3. Distribution et Promotion de Jeux\nLa plateforme distribue des jeux promotionnels aux utilisateurs via le système TFC. Les utilisateurs peuvent participer à des activités promotionnelles pour soutenir les commerçants partenaires et obtenir des récompenses de tâches.",
+  "modal.info.rule4": "4. Règles de Retrait\nToutes les demandes de retrait nécessitent un délai de traitement d’une heure. Une fois le traitement terminé, les fonds seront crédités et pourront être retirés.",
+  "modal.info.rule5": "5. Exigences d’achèvement des tâches\nLe système attribue aléatoirement des combinaisons de tâches adaptées en fonction du solde du compte de l’utilisateur, sans dépasser la capacité du compte.\n- Toutes les tâches combinées doivent être accomplies dans les 24 heures.\n- Le non-respect du délai peut entraîner :\n- Retards de retrait\n- Suspension du compte\n- Pertes financières pour les utilisateurs et les commerçants (les jeux développés par les partenaires seront également affectés).",
+  "modal.info.rule6": "6. Multiplicateurs de Commission\nCertaines commandes combinées peuvent augmenter la commission de 3 à 50 fois le taux de base, en fonction du mécanisme d’allocation du système et du niveau VIP de l’utilisateur.",
+  
   "modal.team.title": "Mon équipe",
   "modal.team.username": "Nom d’utilisateur",
   "modal.team.sales": "Ventes (USDT)",
