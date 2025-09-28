@@ -172,6 +172,12 @@
   "modal.task.completedNote": "Thank you for your submission.",
   "modal.task.doneBtn": "Done",
 
+  "modal.task.error.prefix": "You don’t have enough balance to complete this order.",
+  "modal.task.error.need": "You need",
+  "modal.task.error.suffix": "more to top up in order to purchase.",
+  "modal.task.error.noRating": "Please select a rating.",
+  "modal.task.error.noComment": "Please select or enter a comment.",
+
   "comment.option.fast": "Great product, fast delivery!",
   "comment.option.value": "Good value for money.",
   "comment.option.quality": "High quality, recommended.",

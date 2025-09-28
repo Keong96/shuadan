@@ -172,6 +172,13 @@
   "modal.task.completedNote": "Vielen Dank für Ihre Einreichung.",
   "modal.task.doneBtn": "Fertig",
 
+  "modal.task.error.prefix": "Sie haben nicht genügend Guthaben, um diese Bestellung abzuschließen.",
+  "modal.task.error.need": "Sie benötigen",
+  "modal.task.error.suffix": "mehr, um den Kauf abzuschließen.",
+  "modal.task.error.noRating": "Bitte wählen Sie eine Bewertung aus.",
+  "modal.task.error.noComment": "Bitte wählen Sie einen Kommentar oder geben Sie einen ein.",
+
+
   "comment.option.fast": "Sehr gutes Produkt, schnelle Lieferung!",
   "comment.option.value": "Gutes Preis-Leistungs-Verhältnis.",
   "comment.option.quality": "Hohe Qualität, sehr empfehlenswert.",

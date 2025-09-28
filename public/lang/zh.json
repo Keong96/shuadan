@@ -172,6 +172,12 @@
   "modal.task.completedNote": "感谢您的提交。",
   "modal.task.doneBtn": "完成",
 
+  "modal.task.error.prefix": "您的余额不足，无法完成此订单。",
+  "modal.task.error.need": "您需要再充值",
+  "modal.task.error.suffix": "才能完成购买。",
+  "modal.task.error.noRating": "请选择评分。",
+  "modal.task.error.noComment": "请选择或输入评论。",
+
   "comment.option.fast": "商品很好，发货很快！",
   "comment.option.value": "物有所值。",
   "comment.option.quality": "质量很高，推荐购买。",

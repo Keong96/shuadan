@@ -172,6 +172,12 @@
   "modal.task.completedNote": "Merci pour votre soumission.",
   "modal.task.doneBtn": "Terminé",
 
+  "modal.task.error.prefix": "Vous n’avez pas assez de solde pour terminer cette commande.",
+  "modal.task.error.need": "Vous devez avoir",
+  "modal.task.error.suffix": "de plus pour recharger afin d’acheter.",
+  "modal.task.error.noRating": "Veuillez sélectionner une note.",
+  "modal.task.error.noComment": "Veuillez sélectionner ou saisir un commentaire.",
+
   "comment.option.fast": "Très bon produit, expédition rapide !",
   "comment.option.value": "Bon rapport qualité-prix.",
   "comment.option.quality": "Haute qualité, fortement recommandé.",
@@ -184,7 +190,7 @@
   "modal.info.rule4": "4. Règles de Retrait\nToutes les demandes de retrait nécessitent un délai de traitement d’une heure. Une fois le traitement terminé, les fonds seront crédités et pourront être retirés.",
   "modal.info.rule5": "5. Exigences d’achèvement des tâches\nLe système attribue aléatoirement des combinaisons de tâches adaptées en fonction du solde du compte de l’utilisateur, sans dépasser la capacité du compte.\n- Toutes les tâches combinées doivent être accomplies dans les 24 heures.\n- Le non-respect du délai peut entraîner :\n- Retards de retrait\n- Suspension du compte\n- Pertes financières pour les utilisateurs et les commerçants (les jeux développés par les partenaires seront également affectés).",
   "modal.info.rule6": "6. Multiplicateurs de Commission\nCertaines commandes combinées peuvent augmenter la commission de 3 à 50 fois le taux de base, en fonction du mécanisme d’allocation du système et du niveau VIP de l’utilisateur.",
-  
+
   "modal.team.title": "Mon équipe",
   "modal.team.username": "Nom d’utilisateur",
   "modal.team.sales": "Ventes (USDT)",

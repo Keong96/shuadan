@@ -736,8 +736,11 @@
               data-i18n-placeholder="modal.task.comment.placeholder" placeholder="">
           </div>
 
-          <div id="taskModalErrorMsg" class="text-danger mb-2 d-none">
-            <b>You dont have enough balance to complete this order.</b>
+          <div id="taskModalErrorMsg" class="fw-bold text-center d-none" role="alert">
+            <span data-i18n="modal.task.error.prefix"></span><br>
+            <span data-i18n="modal.task.error.need"></span>
+            <span id="extraAmountNeeded" class="text-danger"></span>
+            <span data-i18n="modal.task.error.suffix"></span>
           </div>
         </div>
 
@@ -1128,8 +1131,7 @@
       modalEl.querySelector('.modal-footer')?.classList.remove('d-none');
 
       try {
-        const { data } = await axios.post(`${window.location.origin}/orders`, {},
-        {
+        const { data } = await axios.post(`${window.location.origin}/orders`, {}, {
           headers: {
             Authorization: `Bearer ${token}`,
             'Accept-Language': localStorage.getItem('lang') || 'en'
@@ -1168,9 +1170,15 @@
         const balance = parseFloat(balText.replace(/[^0-9.]/g, ''));
         if (isNaN(balance)) return alert('Cannot read your balance.');
 
-        if (amount > balance) {
-          errMsg.classList.remove('d-none');
+        // 检查余额不足
+       if (amount > balance) {
+          const shortage = amount - balance;
+          document.getElementById('extraAmountNeeded').innerText = `$${shortage.toFixed(2)}`;
+          errMsg.classList.remove('d-none'); // 显示错误块
           submitBtn.disabled = true;
+        } else {
+          errMsg.classList.add('d-none'); // 隐藏错误块
+          submitBtn.disabled = false;
         }
 
         bsModal.show();
@@ -1182,13 +1190,18 @@
     }
     
     async function submitReview() {
-      const modalEl = document.getElementById('taskModal');
-      const orderId = modalEl.getAttribute('data-order-id');
-      const errMsg  = document.getElementById('taskModalErrorMsg');
-      const submitBtn  = modalEl.querySelector('.btn-success');
-      
+      const modalEl   = document.getElementById('taskModal');
+      const orderId   = modalEl.getAttribute('data-order-id');
+      const errMsg    = document.getElementById('taskModalErrorMsg');
+      const submitBtn = modalEl.querySelector('.btn-success');
+
       if (!orderId) return alert('Order ID missing.');
 
+      // reset error
+      errMsg.classList.add('d-none');
+      submitBtn.disabled = false;
+
+      // rating
       let rating = 0;
       modalEl.querySelectorAll('.star').forEach(s => {
         if (s.innerHTML === '★') {
@@ -1196,35 +1209,35 @@
         }
       });
       if (!rating) {
-        errMsg.innerText = 'Please select a rating.';
+        errMsg.innerHTML = `<div class="fw-bold text-center mb-0" role="alert" data-i18n="modal.task.error.noRating"></div>`;
         errMsg.classList.remove('d-none');
         submitBtn.disabled = true;
         return;
       }
 
-      const trigger = modalEl.querySelector('.custom-select-trigger');
-      let comment = trigger ? trigger.textContent.trim() : '';
-      const customWrap = modalEl.querySelector('#customCommentWrap');
+      // comment
+      const trigger     = modalEl.querySelector('.custom-select-trigger');
+      let comment       = trigger ? trigger.textContent.trim() : '';
+      const customWrap  = modalEl.querySelector('#customCommentWrap');
       const customInput = modalEl.querySelector('#customComment');
       if (customWrap && !customWrap.classList.contains('d-none')) {
         comment = customInput.value.trim();
       }
       if (!comment || comment === 'Choose a comment') {
-        errMsg.innerText = 'Please select or enter a comment.';
+        errMsg.innerHTML = `<div class="fw-bold text-center mb-0" role="alert" data-i18n="modal.task.error.noComment"></div>`;
         errMsg.classList.remove('d-none');
         submitBtn.disabled = true;
         return;
       }
 
-      await axios.post(`/orders/${orderId}/review`, { rating, comment },
-      {
+      await axios.post(`/orders/${orderId}/review`, { rating, comment }, {
         headers: {
-            Authorization: `Bearer ${token}`,
-            'Accept-Language': localStorage.getItem('lang') || 'en'
-          }
+          Authorization: `Bearer ${token}`,
+          'Accept-Language': localStorage.getItem('lang') || 'en'
+        }
       });
-      
-      const body = modalEl.querySelector('.modal-body');
+
+      const body      = modalEl.querySelector('.modal-body');
       const successEl = modalEl.querySelector('#taskSuccessMessage');
 
       Array.from(body.children).forEach(child => {
@@ -1237,7 +1250,7 @@
       modalEl.querySelector('.modal-footer').classList.add('d-none');
       modalEl.addEventListener('hide.bs.modal', refreshUserProfile, { once: true });
     }
-    
+
     function populateProfile(user) {
       // 基础信息
       document.getElementById('balanceAmount').innerText = `$${parseFloat(user.balance || 0).toFixed(2)}`;
