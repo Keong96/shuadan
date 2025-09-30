@@ -18,7 +18,7 @@
     window.$crisp.push(["on", "session:loaded", function() {
       const style = document.createElement("style");
       style.innerHTML = `
-        #crisp-chatbox-button {
+        #crisp-chatbox {
           bottom: 65px !important;
           right: 20px !important;
         }
@@ -736,7 +736,7 @@
               data-i18n-placeholder="modal.task.comment.placeholder" placeholder="">
           </div>
 
-          <div id="taskModalErrorMsg" class="fw-bold text-center d-none" role="alert">
+          <div id="taskModalErrorMsg" class="alert alert-danger fw-bold text-center d-none" role="alert">
             <span data-i18n="modal.task.error.prefix"></span><br>
             <span data-i18n="modal.task.error.need"></span>
             <span id="extraAmountNeeded" class="text-danger"></span>
