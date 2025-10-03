@@ -178,6 +178,9 @@
   "modal.task.error.noRating": "请选择评分。",
   "modal.task.error.noComment": "请选择或输入评论。",
 
+  "modal.task.specialPrize" : "🎉 特别奖品 🎉",
+  "modal.task.CombinedOrders" : "组合订单",
+
   "comment.option.fast": "商品很好，发货很快！",
   "comment.option.value": "物有所值。",
   "comment.option.quality": "质量很高，推荐购买。",

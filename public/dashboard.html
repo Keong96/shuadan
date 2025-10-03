@@ -980,6 +980,28 @@
     </div>
   </div>
 
+  <!-- Special Prize Overlay -->
+  <div id="specialPrizeOverlay" 
+      style="position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,0.7);display:none;z-index:1200;
+            align-items:center;justify-content:center;flex-direction:column;">
+    <div id="specialPrizeText" 
+        data-i18n="modal.task.specialPrize"
+        style="font-size:32px;color:#ffd700;font-weight:bold;
+              text-align:center;
+              transform:scale(0);transition:transform 0.4s ease;">
+      🎉 特别奖品 🎉
+    </div>
+    <div id="combinedOrderText" 
+        data-i18n="modal.task.CombinedOrders"
+        style="font-size:32px;color:#ffd700;font-weight:bold;
+              text-align:center;
+              transform:scale(0);transition:transform 0.4s ease;">
+      🎉 组合订单 🎉
+    </div>
+    <canvas id="specialConfetti" style="position:absolute;top:25%;left:25%;width:50%;height:50%;pointer-events:none;"></canvas>
+  </div>
+
   <script>
     const token = localStorage.getItem("token");
     if(!token)
@@ -1176,6 +1198,9 @@
           document.getElementById('extraAmountNeeded').innerText = `$${shortage.toFixed(2)}`;
           errMsg.classList.remove('d-none'); // 显示错误块
           submitBtn.disabled = true;
+
+          // 🔥 触发特别奖品效果
+          triggerSpecialPrize();
         } else {
           errMsg.classList.add('d-none'); // 隐藏错误块
           submitBtn.disabled = false;
@@ -2155,6 +2180,35 @@
 
       drawWheel();
       await loadPrizes();
+    }
+
+    function triggerSpecialPrize() {
+      const overlay = document.getElementById('specialPrizeOverlay');
+      const text1    = document.getElementById('specialPrizeText');
+      const text2    = document.getElementById('combinedOrderText');
+      const confettiCanvas = document.getElementById('specialConfetti');
+
+      // 显示遮罩层
+      overlay.style.display = 'flex';
+
+      // Pop 动画
+      setTimeout(() => {
+        text1.style.transform = 'scale(1)';
+        text2.style.transform = 'scale(1)';
+      }, 50);
+
+      // confetti 效果
+      const myConfetti = confetti.create(confettiCanvas, { resize: true, useWorker: true });
+      myConfetti({ particleCount: 200, spread: 120, origin: { y: 0.6 } });
+
+      // 3 秒后自动关闭
+      setTimeout(() => {
+        text1.style.transform = 'scale(0)';
+        text2.style.transform = 'scale(0)';
+        setTimeout(() => {
+          overlay.style.display = 'none';
+        }, 400);
+      }, 3000);
     }
 
     function marquee() {

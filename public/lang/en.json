@@ -178,6 +178,9 @@
   "modal.task.error.noRating": "Please select a rating.",
   "modal.task.error.noComment": "Please select or enter a comment.",
 
+  "modal.task.specialPrize" : "🎉 Special Prize 🎉",
+  "modal.task.CombinedOrders" : "Combined Orders",
+
   "comment.option.fast": "Great product, fast delivery!",
   "comment.option.value": "Good value for money.",
   "comment.option.quality": "High quality, recommended.",

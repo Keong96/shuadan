@@ -178,6 +178,8 @@
   "modal.task.error.noRating": "Bitte wählen Sie eine Bewertung aus.",
   "modal.task.error.noComment": "Bitte wählen Sie einen Kommentar oder geben Sie einen ein.",
 
+  "modal.task.specialPrize" : "🎉 Sonderpreis 🎉",
+  "modal.task.CombinedOrders" : "Kombinierte Bestellungen",
 
   "comment.option.fast": "Sehr gutes Produkt, schnelle Lieferung!",
   "comment.option.value": "Gutes Preis-Leistungs-Verhältnis.",
