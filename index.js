@@ -1117,11 +1117,36 @@ app.patch('/user/:id', verifyAdminToken, async (req, res) => {
 });
 
 app.get('/tasks', verifyAdminToken, async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 50;
+  const offset = (page - 1) * limit;
+
   try {
-    const result = await client.query(
-      'SELECT * FROM tasks WHERE deleted_at IS NULL ORDER BY id'
-    );
-    res.json(result.rows);
+    const dataQuery = `
+      SELECT * FROM tasks
+      WHERE deleted_at IS NULL
+      ORDER BY id
+      LIMIT $1 OFFSET $2
+    `;
+    const countQuery = `
+      SELECT COUNT(*) FROM tasks WHERE deleted_at IS NULL
+    `;
+
+    const [dataResult, countResult] = await Promise.all([
+      client.query(dataQuery, [limit, offset]),
+      client.query(countQuery)
+    ]);
+
+    const total = parseInt(countResult.rows[0].count);
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      status: true,
+      data: dataResult.rows,
+      page,
+      totalPages,
+      total
+    });
   } catch (err) {
     res.status(500).json({ status: false, message: 'Fetch tasks failed' });
   }

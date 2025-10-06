@@ -51,6 +51,7 @@
       background-color: #2c2f48;
       border-bottom: 1px solid #333;
       padding: 1rem;
+      min-width: 300px;
     }
 
     .sidebar .nav-link {
@@ -252,6 +253,7 @@
         <div id="taskContainer" class="task-grid">
           <!-- Task cards will be injected here by JavaScript -->
         </div>
+        <div id="pagination" class="d-flex justify-content-center mt-4"></div>
       </div>
     </div>
   </div>
@@ -331,13 +333,24 @@
       window.stop()
     }
 
-    async function loadTasks() {
-      const res = await axios.get('/tasks', {
+    let currentPage = 1;
+    let totalPages = 1;
+
+    async function loadTasks(page = 1) {
+      if (typeof page !== 'number') return; // prevent event objects
+
+      const res = await axios.get(`/tasks?page=${page}&limit=50`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      const { data, totalPages: total, page: current } = res.data;
+      totalPages = total;
+      currentPage = current;
+
       const container = document.getElementById('taskContainer');
       container.innerHTML = '';
-      res.data.forEach(task => {
+
+      data.forEach(task => {
         container.innerHTML += `
           <div class="task-card">
             <img src="${task.image_url}" class="task-image" />
@@ -360,6 +373,25 @@
             </div>
           </div>`;
       });
+
+      renderPagination();
+    }
+
+    function renderPagination() {
+      const pagination = document.getElementById('pagination');
+      pagination.innerHTML = `
+        <button class="btn btn-outline-secondary me-2" 
+          onclick="loadTasks(${currentPage - 1})" 
+          ${currentPage === 1 ? 'disabled' : ''}>
+          Prev
+        </button>
+        <span>Page ${currentPage} / ${totalPages}</span>
+        <button class="btn btn-outline-secondary ms-2" 
+          onclick="loadTasks(${currentPage + 1})" 
+          ${currentPage === totalPages ? 'disabled' : ''}>
+          Next
+        </button>
+      `;
     }
 
     async function editTask(id) {
@@ -428,7 +460,7 @@
       location.href = 'index.html';
     }
 
-    window.addEventListener('DOMContentLoaded', loadTasks);
+    window.addEventListener('DOMContentLoaded', () => loadTasks(1));
   </script>
 </body>
 </html>
