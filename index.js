@@ -1045,17 +1045,27 @@ app.get('/users', verifyAdminToken, async (req, res) => {
 
 app.post('/create-demo', verifyToken, async (req, res) => {
   try {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let username = '';
-    for (let i = 0; i < 6; i++) {
-      username += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
+    const { username, password, referred_by, balance, commission_rate } = req.body;
+    if (!username || !password)
+      return res.status(200).json({ status: false, message: '用户名与密码必填' });
 
-    const password = Math.random().toString(36).substring(2, 10);
+    // 检查用户名是否重复
+    const existCheck = await client.query('SELECT 1 FROM users WHERE username = $1', [username]);
+    if (existCheck.rowCount > 0)
+      return res.status(200).json({ status: false, message: '该用户名已存在' });
+
+    // 验证 balance 与 commission_rate 范围
+    const initialBalance = parseFloat(balance);
+    const commissionRate = parseFloat(commission_rate);
+    if (isNaN(initialBalance) || initialBalance < 0)
+      return res.status(400).json({ status: false, message: '余额必须为非负数字' });
+    if (isNaN(commissionRate) || commissionRate < 0 || commissionRate > 100)
+      return res.status(400).json({ status: false, message: '佣金比例必须在 0 - 100 之间' });
+
     const security_pin = Math.floor(1000 + Math.random() * 9000).toString();
-    const initialBalance = 1000.00;
     const vipLevel = 'BASIC';
 
+    // 获取 blocker 配置
     const cfgRes = await client.query("SELECT key, value FROM config WHERE key = 'blocker_indexes'");
     const cfgMap = Object.fromEntries(cfgRes.rows.map(r => [r.key, r.value || '']));
     const blockerIndexes = (cfgMap.blocker_indexes || '')
@@ -1063,6 +1073,7 @@ app.post('/create-demo', verifyToken, async (req, res) => {
       .map(s => parseInt(s.trim(), 10))
       .filter(n => !Number.isNaN(n));
 
+    // 生成唯一推荐码
     let selfReferralCode;
     while (true) {
       const tempCode = generateReferralCode();
@@ -1073,31 +1084,35 @@ app.post('/create-demo', verifyToken, async (req, res) => {
       }
     }
 
+    // 插入用户
     const userRes = await client.query(
       `INSERT INTO users
-         (username, password, security_pin, is_demo, referral_code, user_type, vip_level, balance,
+         (username, password, security_pin, is_demo, referral_code, referred_by, user_type, vip_level, balance,
           can_withdraw, can_do_task, status, created_at)
-       VALUES ($1, $2, $3, TRUE, $4, 2, $5, $6, FALSE, FALSE, FALSE, CURRENT_TIMESTAMP)
+       VALUES ($1, $2, $3, TRUE, $4, $5, 2, $6, $7, FALSE, FALSE, FALSE, CURRENT_TIMESTAMP)
        RETURNING id, balance`,
-      [username, password, security_pin, selfReferralCode, vipLevel, initialBalance]
+      [username, password, security_pin, selfReferralCode, referred_by || null, vipLevel, initialBalance]
     );
-    const userId = userRes.rows[0].id;
-    let remainingBalance = parseFloat(userRes.rows[0].balance) || initialBalance;
 
+    const userId = userRes.rows[0].id;
+    let remainingBalance = parseFloat(userRes.rows[0].balance);
     const cycleSize = 20;
     const blockerArray = blockerIndexes.length ? blockerIndexes : null;
+
+    // 创建 cycle
     const cycleRes = await client.query(
       `INSERT INTO cycles (user_id, cycle_size, blocker_indexes, orders, status, commission_amount, commission_rate, created_at)
-       VALUES ($1, $2, $3, '{}', TRUE, 0, 0, NOW())
+       VALUES ($1, $2, $3, '{}', TRUE, 0, $4, NOW())
        RETURNING id, blocker_indexes`,
-      [userId, cycleSize, blockerArray]
+      [userId, cycleSize, blockerArray, commissionRate]
     );
+
     const cycleId = cycleRes.rows[0].id;
     const usedBlockers = Array.isArray(cycleRes.rows[0].blocker_indexes)
       ? cycleRes.rows[0].blocker_indexes
       : (blockerArray || []);
 
-    // 读取 tasks（只取 metadata）
+    // 获取任务模板
     let tasksRes = await client.query(
       `SELECT id, product_name, product_description, image_url FROM tasks WHERE deleted_at IS NULL ORDER BY id ASC LIMIT $1`,
       [cycleSize]
@@ -1114,7 +1129,7 @@ app.post('/create-demo', verifyToken, async (req, res) => {
     const availableTasks = tasksRes.rows;
     const orderIds = [];
 
-    // 生成 20 个订单，金额基于 remainingBalance（blocker: > balance; normal: 5-10%）
+    // 生成 20 个订单
     for (let i = 0; i < cycleSize; i++) {
       const t = availableTasks[i % availableTasks.length];
       const idx = i + 1;
@@ -1122,17 +1137,17 @@ app.post('/create-demo', verifyToken, async (req, res) => {
 
       let amount;
       if (isBlocker) {
-        const mult = 1.10 + Math.random() * 0.10; // 1.10 - 1.20
+        const mult = 1.10 + Math.random() * 0.10;
         amount = parseFloat((remainingBalance * mult).toFixed(2));
         if (amount <= remainingBalance) amount = parseFloat((remainingBalance + 1).toFixed(2));
         if (remainingBalance <= 0) amount = 1.00;
       } else {
-        const pct = 0.05 + Math.random() * 0.05; // 5% - 10%
+        const pct = 0.05 + Math.random() * 0.05;
         amount = parseFloat((remainingBalance * pct).toFixed(2));
         if (amount <= 0) amount = 1.00;
       }
 
-      const commission = parseFloat((amount * 0.03).toFixed(2)); // demo 固定 3%
+      const commission = parseFloat((amount * commissionRate / 100).toFixed(2));
 
       const or = await client.query(
         `INSERT INTO orders (user_id, cycle_id, task_id, amount, commission, status, created_at)
@@ -1140,10 +1155,10 @@ app.post('/create-demo', verifyToken, async (req, res) => {
         [userId, cycleId, t.id, amount, commission]
       );
       orderIds.push(or.rows[0].id);
-
       remainingBalance = Math.max(0, parseFloat((remainingBalance - amount).toFixed(2)));
     }
 
+    // 汇总佣金
     const commRes = await client.query(
       `SELECT COALESCE(SUM(commission),0)::numeric(12,2) AS s FROM orders WHERE id = ANY($1::int[])`,
       [orderIds]
@@ -1157,15 +1172,11 @@ app.post('/create-demo', verifyToken, async (req, res) => {
 
     return res.json({
       status: true,
-      message: '',
-      data: {
-        username,
-        password
-      }
+      data: { username, password }
     });
   } catch (err) {
     console.error('Error creating demo account:', err);
-    return res.status(500).json({ status: false, message: 'Failed to create demo account' });
+    return res.status(500).json({ status: false, message: '创建测试账号失败' });
   }
 });
 

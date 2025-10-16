@@ -422,6 +422,44 @@
     </div>
   </div>
 
+  <!-- Create Demo Modal -->
+  <div class="modal fade" id="createDemoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">创建测试账号</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">用户名</label>
+            <input type="text" class="form-control" id="demoUsername" placeholder="输入用户名">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">密码</label>
+            <input type="text" class="form-control" id="demoPassword" placeholder="输入密码">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">推荐人 ID</label>
+            <input type="text" class="form-control" id="demoReferredBy" placeholder="输入推荐人 ID（可留空）">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">余额 (Balance)</label>
+            <input type="number" class="form-control" id="demoBalance" placeholder="输入初始余额" value="0">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">佣金比率 (%)</label>
+            <input type="number" class="form-control" id="demoCommissionRate" placeholder="例如 10" value="10">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="button" class="btn btn-primary" id="createDemoBtn" onclick="createDemoAccount()">创建</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     const token = localStorage.getItem("token");
     if(!token)
@@ -976,10 +1014,29 @@
       if (summaryRow) summaryRow.textContent = total.toFixed(2);
     }
 
-    function createDemoAccount() {
-      if (!confirm('是否确定 随机创建测试账号？')) return;
+    const createDemoModal = document.getElementById('createDemoModal');
 
-      axios.post('/create-demo', {}, {
+    createDemoModal.addEventListener('show.bs.modal', () => {
+      document.getElementById('demoUsername').value = '';
+      document.getElementById('demoPassword').value = '';
+      document.getElementById('demoReferredBy').value = '';
+      document.getElementById('demoBalance').value = '0';
+      document.getElementById('demoCommissionRate').value = '10';
+    });
+
+    function createDemoAccount() {
+      const username = document.getElementById('demoUsername').value.trim();
+      const password = document.getElementById('demoPassword').value.trim();
+      const referred_by = document.getElementById('demoReferredBy').value.trim();
+      const balance = parseFloat(document.getElementById('demoBalance').value || 0);
+      const commission_rate = parseFloat(document.getElementById('demoCommissionRate').value || 0);
+
+      if (!username || !password) {
+        alert('用户名和密码不能为空');
+        return;
+      }
+
+      axios.post('/create-demo', { username, password, referred_by, balance, commission_rate}, {
         headers: { Authorization: `Bearer ${token}` }
       })
       .then(res => {
@@ -987,13 +1044,6 @@
           alert(res.data.message || '创建测试账号失败');
           return;
         }
-
-        const d = res.data.data;
-        alert(
-          `测试账号创建成功！\n\n` +
-          `用户名：${d.username}\n` +
-          `密码：${d.password}`
-        );
         location.reload();
       })
       .catch(err => {
