@@ -1044,43 +1044,129 @@ app.get('/users', verifyAdminToken, async (req, res) => {
 });
 
 app.post('/create-demo', verifyToken, async (req, res) => {
-  // 随机用户名 (a-z, A-Z, 0-9, 6位)
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let username = '';
-  for (let i = 0; i < 6; i++) {
-    username += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-
-  const password = Math.random().toString(36).substring(2, 10);
-
-  // 随机 4 位 security_pin
-  const security_pin = Math.floor(1000 + Math.random() * 9000).toString();
-
-  // 生成唯一 referral_code 使用现有函数
-  let selfReferralCode;
-  while (true) {
-    const tempCode = generateReferralCode();
-    const check = await client.query('SELECT 1 FROM users WHERE referral_code = $1', [tempCode]);
-    if (check.rowCount === 0) {
-      selfReferralCode = tempCode;
-      break;
+  try {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let username = '';
+    for (let i = 0; i < 6; i++) {
+      username += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-  }
 
-  const result = await client.query(
-    `INSERT INTO users (username, password, security_pin, is_demo, referral_code, created_at)
-     VALUES ($1, $2, $3, true, $4, CURRENT_TIMESTAMP)
-     RETURNING id, username, security_pin, is_demo, referral_code`,
-    [username, password, security_pin, selfReferralCode]
-  );
+    const password = Math.random().toString(36).substring(2, 10);
+    const security_pin = Math.floor(1000 + Math.random() * 9000).toString();
+    const initialBalance = 1000.00;
+    const vipLevel = 'BASIC';
 
-  res.json({
-    status: true,
-    data: {
-      username: result.rows[0].username,
-      password: password,
+    const cfgRes = await client.query("SELECT key, value FROM config WHERE key = 'blocker_indexes'");
+    const cfgMap = Object.fromEntries(cfgRes.rows.map(r => [r.key, r.value || '']));
+    const blockerIndexes = (cfgMap.blocker_indexes || '')
+      .split(',')
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => !Number.isNaN(n));
+
+    let selfReferralCode;
+    while (true) {
+      const tempCode = generateReferralCode();
+      const check = await client.query('SELECT 1 FROM users WHERE referral_code = $1', [tempCode]);
+      if (check.rowCount === 0) {
+        selfReferralCode = tempCode;
+        break;
+      }
     }
-  });
+
+    const userRes = await client.query(
+      `INSERT INTO users
+         (username, password, security_pin, is_demo, referral_code, user_type, vip_level, balance,
+          can_withdraw, can_do_task, status, created_at)
+       VALUES ($1, $2, $3, TRUE, $4, 2, $5, $6, FALSE, FALSE, FALSE, CURRENT_TIMESTAMP)
+       RETURNING id, balance`,
+      [username, password, security_pin, selfReferralCode, vipLevel, initialBalance]
+    );
+    const userId = userRes.rows[0].id;
+    let remainingBalance = parseFloat(userRes.rows[0].balance) || initialBalance;
+
+    const cycleSize = 20;
+    const blockerArray = blockerIndexes.length ? blockerIndexes : null;
+    const cycleRes = await client.query(
+      `INSERT INTO cycles (user_id, cycle_size, blocker_indexes, orders, status, commission_amount, commission_rate, created_at)
+       VALUES ($1, $2, $3, '{}', TRUE, 0, 0, NOW())
+       RETURNING id, blocker_indexes`,
+      [userId, cycleSize, blockerArray]
+    );
+    const cycleId = cycleRes.rows[0].id;
+    const usedBlockers = Array.isArray(cycleRes.rows[0].blocker_indexes)
+      ? cycleRes.rows[0].blocker_indexes
+      : (blockerArray || []);
+
+    // 读取 tasks（只取 metadata）
+    let tasksRes = await client.query(
+      `SELECT id, product_name, product_description, image_url FROM tasks WHERE deleted_at IS NULL ORDER BY id ASC LIMIT $1`,
+      [cycleSize]
+    );
+    if (tasksRes.rowCount === 0) {
+      const placeholder = await client.query(
+        `INSERT INTO tasks (product_name, product_description, image_url, created_at)
+         VALUES ($1,$2,$3,NOW()) RETURNING id, product_name, product_description, image_url`,
+        ['Demo Item', 'Auto-generated demo task', '']
+      );
+      tasksRes = { rows: [placeholder.rows[0]] };
+    }
+
+    const availableTasks = tasksRes.rows;
+    const orderIds = [];
+
+    // 生成 20 个订单，金额基于 remainingBalance（blocker: > balance; normal: 5-10%）
+    for (let i = 0; i < cycleSize; i++) {
+      const t = availableTasks[i % availableTasks.length];
+      const idx = i + 1;
+      const isBlocker = Array.isArray(usedBlockers) && usedBlockers.includes(idx);
+
+      let amount;
+      if (isBlocker) {
+        const mult = 1.10 + Math.random() * 0.10; // 1.10 - 1.20
+        amount = parseFloat((remainingBalance * mult).toFixed(2));
+        if (amount <= remainingBalance) amount = parseFloat((remainingBalance + 1).toFixed(2));
+        if (remainingBalance <= 0) amount = 1.00;
+      } else {
+        const pct = 0.05 + Math.random() * 0.05; // 5% - 10%
+        amount = parseFloat((remainingBalance * pct).toFixed(2));
+        if (amount <= 0) amount = 1.00;
+      }
+
+      const commission = parseFloat((amount * 0.03).toFixed(2)); // demo 固定 3%
+
+      const or = await client.query(
+        `INSERT INTO orders (user_id, cycle_id, task_id, amount, commission, status, created_at)
+         VALUES ($1,$2,$3,$4,$5,'PENDING',NOW()) RETURNING id`,
+        [userId, cycleId, t.id, amount, commission]
+      );
+      orderIds.push(or.rows[0].id);
+
+      remainingBalance = Math.max(0, parseFloat((remainingBalance - amount).toFixed(2)));
+    }
+
+    const commRes = await client.query(
+      `SELECT COALESCE(SUM(commission),0)::numeric(12,2) AS s FROM orders WHERE id = ANY($1::int[])`,
+      [orderIds]
+    );
+    const commissionSum = parseFloat(commRes.rows[0].s) || 0.00;
+
+    await client.query(
+      `UPDATE cycles SET orders = $1, commission_amount = COALESCE(commission_amount,0) + $2 WHERE id = $3`,
+      [orderIds, commissionSum, cycleId]
+    );
+
+    return res.json({
+      status: true,
+      message: '',
+      data: {
+        username,
+        password
+      }
+    });
+  } catch (err) {
+    console.error('Error creating demo account:', err);
+    return res.status(500).json({ status: false, message: 'Failed to create demo account' });
+  }
 });
 
 app.get('/config', verifyAdminToken, async (req, res) => {
