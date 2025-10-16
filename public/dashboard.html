@@ -372,7 +372,6 @@
             </div>
           </div>
           <button id="btnOptimize" class="btn btn-primary btn-wide" data-bs-toggle="modal" data-bs-target="#taskModal" data-i18n="tasks.optimize" onclick="takeOrder()">Optimize</button>
-          <button id="btnClaimComm" class="btn btn-success btn-wide d-none" data-bs-toggle="modal" data-bs-target="#commModal" data-i18n="tasks.claimComm">Claim Commission</button>
         </div>
       </div>
 
@@ -759,33 +758,6 @@
           <h5 class="fw-bold text-success" data-i18n="modal.task.completed"></h5>
           <p class="text-muted" data-i18n="modal.task.completedNote"></p>
           <button class="btn btn-success mt-3 px-4" data-bs-dismiss="modal" data-i18n="modal.task.doneBtn"></button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Commission Modal -->
-  <div class="modal fade" id="commModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content shadow border-0">
-        <div class="modal-header">
-          <h5 class="modal-title" data-i18n="commModal.title">Claim Commission</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body text-center">
-          <div class="mb-3">
-            <i class="bi bi-check-circle-fill text-success fs-1 mb-2"></i>
-            <h5 data-i18n="commModal.cycleComplete">You have completed your current cycle!</h5>
-            <p class="text-muted" data-i18n="commModal.details">Completed Tasks: <strong id="completedTasks"></strong></p>
-          </div>
-          <div class="border-top pt-3 mt-2">
-            <span data-i18n="commModal.message">Total commission to claim:</span>
-            <div class="fs-4 fw-bold text-success" id="commissionAmount">$0.00</div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="commModal.cancel">Cancel</button>
-          <button type="button" class="btn btn-success" onclick="claimCommission()" data-i18n="commModal.confirm">Confirm</button>
         </div>
       </div>
     </div>
@@ -1289,19 +1261,6 @@
         document.getElementById('profileImage').src = user.profile_image;
       }
 
-      // 按钮显示逻辑
-      const optimizeBtn = document.getElementById('btnOptimize');
-      const claimBtn    = document.getElementById('btnClaimComm');
-      const [completed, total] = (user.completion_ratio || '0/0').split('/').map(n => parseInt(n, 10));
-
-      if (completed < total) {
-        optimizeBtn.classList.remove('d-none');
-        claimBtn.classList.add('d-none');
-      } else {
-        optimizeBtn.classList.add('d-none');
-        claimBtn.classList.remove('d-none');
-      }
-
       // 用户名
       document.querySelector('#section-profile h6').innerText = user.username || '-';
 
@@ -1396,41 +1355,6 @@
         console.error('/update-profile error:', err)
         alert('Server error')
       })
-    }
-    
-    async function loadCommissionData(btn) {
-      try {
-        const res = await axios.post('/orders', {}, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Accept-Language': localStorage.getItem('lang') || 'en'
-          }
-        });
-
-        let pendingCommission = 0;
-        let completedTasks = 0;
-
-        if (res.data?.status) {
-          // commission
-          if (!isNaN(res.data.data)) {
-            pendingCommission = parseFloat(res.data.data || 0);
-          } else if (typeof res.data.data === 'object') {
-            pendingCommission = parseFloat(res.data.data.commission || 0);
-          }
-
-          // completed tasks (top-level)
-          if (typeof res.data.completedTasks !== 'undefined') {
-            completedTasks = res.data.completedTasks;
-          }
-        }
-
-        document.getElementById('commissionAmount').innerText = `$${pendingCommission.toFixed(2)}`;
-        document.getElementById('completedTasks').innerText = completedTasks;
-        btn.setAttribute('data-commission-amount', pendingCommission);
-      } catch (err) {
-        console.error('loadCommissionData error:', err);
-        alert(err.response?.data?.message || 'Failed to load commission data.');
-      }
     }
     
     async function loadTaskRecord() {
@@ -1850,11 +1774,6 @@
         options.classList.remove('show');
       });
 
-      document.getElementById('commModal').addEventListener('show.bs.modal', () => {
-        const btn = document.getElementById('btnClaimComm');
-        loadCommissionData(btn);
-      });
-
       document.getElementById('withdrawModal').addEventListener('show.bs.modal', async () => {
         const res = await axios.get('/me', {
           headers: {
@@ -1916,22 +1835,6 @@
       });
     });
     
-    async function claimCommission() {
-      const res = await axios.post(`${window.location.origin}/claim-commission`, {}, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Accept-Language': localStorage.getItem('lang') || 'en'
-          }
-        });
-
-        if (!res.data?.status) throw new Error(res.data?.message || 'Failed to claim commission.');
-
-        const modal = bootstrap.Modal.getInstance(document.getElementById('commModal'));
-        modal.hide();
-
-        switchSection('funds');
-    }
-
     function refreshUserProfile() {
       const token = localStorage.getItem('token');
       if (!token) return;

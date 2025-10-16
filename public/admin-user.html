@@ -143,6 +143,9 @@
       <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h3 class="mb-0">用户管理</h3>
+          <button class="btn btn-primary" onclick="createDemoAccount()">
+            <i class="bi bi-plus-lg me-1"></i> 创建测试账号
+          </button>
         </div>
     
         <div class="card p-3">
@@ -156,7 +159,7 @@
                   <th class="text-nowrap">信用积分</th>
                   <th class="text-nowrap">余额</th>
                   <th class="text-nowrap">状态</th>
-                  <th class="text-nowrap">注册日期</th>
+                  <th class="text-nowrap">任务进度</th>
                   <th class="text-nowrap">操作</th>
                 </tr>
               </thead>
@@ -459,11 +462,13 @@
         const canDoTaskClass = user.can_do_task ? 'btn-success' : 'btn-danger';
         const canDoTaskText = user.can_do_task ? '允许交易' : '禁止交易';
 
+        const isDemo = user.is_demo === true ? '<span class="badge bg-info text-dark">DEMO</span>' : '';
+
         const createdDate = new Date(new Date(user.created_at).getTime() + 8 * 60 * 60 * 1000);
         html += `
           <tr>
             <td>${i + 1}</td>
-            <td>${user.username}</td>
+            <td>${user.username} ${isDemo} </td>
             <td><span class="badge bg-warning text-dark">${user.vip_level}</span></td>
             <td>${user.credit_score}</td>
             <td>${parseFloat(user.balance).toFixed(2)}</td>
@@ -472,7 +477,7 @@
               <button class="btn ${canWithdrawClass} btn-sm statusBtn" data-id="${user.id}" data-field="can_withdraw">${canWithdrawText}</button>
               <button class="btn ${canDoTaskClass} btn-sm statusBtn" data-id="${user.id}" data-field="can_do_task">${canDoTaskText}</button>
             </td>
-            <td>${createdDate.toLocaleString('en-GB', { hour12: false, timeZone: 'Asia/Singapore' })}</td>
+            <td> ${user.completion_ratio} </td>
             <td class="text-nowrap">
             <button 
               class="btn btn-sm btn-warning text-dark me-1" 
@@ -969,6 +974,32 @@
       });
       const summaryRow = table.querySelector('tr.table-success td:last-child');
       if (summaryRow) summaryRow.textContent = total.toFixed(2);
+    }
+
+    function createDemoAccount() {
+      if (!confirm('是否确定 随机创建测试账号？')) return;
+
+      axios.post('/create-demo', {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => {
+        if (!res.data.status) {
+          alert(res.data.message || '创建测试账号失败');
+          return;
+        }
+
+        const d = res.data.data;
+        alert(
+          `测试账号创建成功！\n\n` +
+          `用户名：${d.username}\n` +
+          `密码：${d.password}`
+        );
+        location.reload();
+      })
+      .catch(err => {
+        console.error(err);
+        alert('创建测试账号失败。');
+      });
     }
 
     function Logout() {

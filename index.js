@@ -402,25 +402,25 @@ app.post('/orders', verifyToken, async (req, res) => {
       .map(s => parseInt(s.trim(), 10))
       .filter(n => !Number.isNaN(n));
 
-    // 读取用户 vip_level（若无，默认 BASIC）
-    const ures = await client.query("SELECT vip_level FROM users WHERE id = $1", [userId]);
+    // 读取用户 vip_level 和 balance（若无，默认 BASIC / 0）
+    const ures = await client.query("SELECT vip_level, balance FROM users WHERE id = $1", [userId]);
     const vipLevel = (ures.rows[0] && ures.rows[0].vip_level) ? ures.rows[0].vip_level : 'BASIC';
+    const userBalance = parseFloat(ures.rows[0] && ures.rows[0].balance) || 0;
 
     // 取该 vip 的配置（如果没在 config 里，做 fallback）
     const vipCfg = vipTiers[vipLevel] || vipTiers['BASIC'] || { cycle_size: 20, commission_rate: 0.03 };
     const vipCycleSize = parseInt(vipCfg.cycle_size, 10) || 20;
     const vipCommissionRate = parseFloat(vipCfg.commission_rate) || 0.03;
 
-    // 2) 查找激活周期（status = TRUE）
+    // 查找激活周期（status = TRUE）
     let cr = await client.query(
       "SELECT id, orders, cycle_size, blocker_indexes, commission_amount, commission_rate FROM cycles WHERE user_id = $1 AND status = TRUE AND deleted_at IS NULL ORDER BY id DESC LIMIT 1",
       [userId]
     );
     let cycle = cr.rows[0];
 
-    // 3) 如果没有激活周期，就按用户 vip 创建一个新的（把 blocker_indexes、cycle_size、commission_rate 写入 cycle）
+    // 如果没有激活周期，就按用户 vip 创建一个新的
     if (!cycle) {
-      // blocker_indexes 存为 int[]，用上面解析的全局 blockerIndexes（或者你也可以把 blocker_indexes 存在 vipCfg）
       const blockerArray = blockerIndexes.length ? blockerIndexes : null; // pass null if empty
       const ins = await client.query(
         `INSERT INTO cycles (user_id, cycle_size, blocker_indexes, commission_rate, commission_amount, orders, status, created_at)
@@ -431,17 +431,7 @@ app.post('/orders', verifyToken, async (req, res) => {
       cycle = ins.rows[0];
     }
 
-    // 4) 如果当前周期已完成（订单数 >= cycle_size），返回待领佣金
-    const completedCount = Array.isArray(cycle.orders) ? cycle.orders.length : 0;
-    if (completedCount >= cycle.cycle_size) {
-      return res.json({
-        status: true,
-        data: parseFloat(cycle.commission_amount || 0).toFixed(2),
-        completedTasks: completedCount
-      });
-    }
-
-    // 5) 检查是否已有未完成的 pending 订单
+    // 检查是否已有未完成的 pending 订单
     const pending = await client.query(
       `SELECT o.id, o.amount, o.commission, t.product_name, t.product_description, t.image_url
        FROM orders o
@@ -465,42 +455,61 @@ app.post('/orders', verifyToken, async (req, res) => {
       });
     }
 
-    // 6) 计算 idx，判断是否是 blocker（以 cycle.blocker_indexes 为准）
+    // 计算 idx，判断是否是 blocker
+    const completedCount = Array.isArray(cycle.orders) ? cycle.orders.length : 0;
     const idx = completedCount + 1;
     const cycleBlockers = Array.isArray(cycle.blocker_indexes) ? cycle.blocker_indexes : blockerIndexes;
     const isBlocker = Array.isArray(cycleBlockers) && cycleBlockers.includes(idx);
 
-    // 7) 随机选 task（task 表必须有 product_price 与 blocker_price 字段）
-    const taskRes = await client.query("SELECT id, product_name, product_description, image_url, product_price, blocker_price FROM tasks WHERE deleted_at IS NULL ORDER BY RANDOM() LIMIT 1");
+    // 随机选 task（仅用于 product metadata，价格不再从 tasks 读取）
+    const taskRes = await client.query("SELECT id, product_name, product_description, image_url FROM tasks WHERE deleted_at IS NULL ORDER BY RANDOM() LIMIT 1");
     if (taskRes.rowCount === 0) {
       return res.status(200).json({ status: false, message: 'No available tasks' });
     }
     const task = taskRes.rows[0];
 
-    // 8) 金额直接取 task 中的价格；佣金以 cycle.commission_rate（已经为小数）计算
-    const amount = parseFloat(isBlocker ? task.blocker_price : task.product_price);
-    if (Number.isNaN(amount)) return res.status(200).json({ status: false, message: 'Invalid task price' });
+    // 计算金额（基于 userBalance，而非 tasks 中的硬编码价格）
+    let amount;
+    if (isBlocker) {
+      // blocker 必须大于用户现有余额。使用 110% - 120% 的区间（保证高于余额）
+      const mult = 1.10 + Math.random() * 0.10; // 1.10 - 1.20
+      amount = parseFloat((userBalance * mult).toFixed(2));
+      // 若 userBalance 为 0，确保有一个合理值（设为 1.00）
+      if (amount <= userBalance) {
+        amount = parseFloat((userBalance + 1).toFixed(2));
+      }
+    } else {
+      // 普通订单：大约用户余额的 5% - 10%
+      const pct = 0.05 + Math.random() * 0.05; // 0.05 - 0.10
+      amount = parseFloat((userBalance * pct).toFixed(2));
+      // 如果余额太小导致 amount 为 0，使用最低 1.00 作为回退
+      if (amount <= 0) amount = 1.00;
+    }
 
-    const commission = parseFloat((amount * parseFloat(cycle.commission_rate || vipCommissionRate)).toFixed(2));
+    if (Number.isNaN(amount) || !isFinite(amount)) return res.status(200).json({ status: false, message: 'Invalid computed price' });
 
-    // 9) 插入订单（状态 PENDING），并把 order id append 到 cycles.orders（不改变 commission_amount）
+    // 佣金以 cycle.commission_rate（已经为小数）计算
+    const commissionRate = parseFloat(cycle.commission_rate || vipCommissionRate) || vipCommissionRate;
+    const commission = parseFloat((amount * commissionRate).toFixed(2));
+
+    // 插入订单（状态 PENDING），并把 order id append 到 cycles.orders
     const or = await client.query(
       `INSERT INTO orders (user_id, cycle_id, task_id, amount, commission, status, created_at)
-      VALUES ($1, $2, $3, $4, $5, 'PENDING', NOW())
-      RETURNING id, amount, commission`,
+       VALUES ($1, $2, $3, $4, $5, 'PENDING', NOW())
+       RETURNING id, amount, commission`,
       [userId, cycle.id, task.id, amount, commission]
     );
 
     // 更新 cycle.orders 并累加 commission_amount
     await client.query(
       `UPDATE cycles 
-      SET orders = array_append(COALESCE(orders, '{}'), $1),
-          commission_amount = COALESCE(commission_amount, 0) + $2
-      WHERE id = $3`,
+       SET orders = array_append(COALESCE(orders, '{}'), $1),
+           commission_amount = COALESCE(commission_amount, 0) + $2
+       WHERE id = $3`,
       [or.rows[0].id, commission, cycle.id]
     );
 
-    // 10) 返回新订单给前端
+    // 返回新订单给前端
     res.json({
       status: true,
       data: {
@@ -527,18 +536,22 @@ app.post('/orders/:id/review', verifyToken, async (req, res) => {
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
 
   try {
+    // 1️⃣ 查订单 + cycle
     const { rows } = await client.query(`
-      SELECT * FROM orders 
-      WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL AND status != 'COMPLETED'
+      SELECT o.*, c.id AS cycle_id, c.orders, c.cycle_size, c.commission_amount
+      FROM orders o
+      JOIN cycles c ON o.cycle_id = c.id
+      WHERE o.id = $1 AND o.user_id = $2 AND o.deleted_at IS NULL
     `, [orderId, userId]);
-
     if (!rows.length)
       return res.status(200).json({ status: false, message: t('error.orderNotFound') });
 
     const order = rows[0];
+    const cycleId = order.cycle_id;
     const amount = parseFloat(order.amount);
     const commission = parseFloat(order.commission);
 
+    // 2️⃣ 余额检查 + 扣款/返还
     const balRes = await client.query(`SELECT balance FROM users WHERE id = $1`, [userId]);
     if (!balRes.rows.length)
       return res.status(200).json({ status: false, message: t('error.userNotFound') });
@@ -548,28 +561,60 @@ app.post('/orders/:id/review', verifyToken, async (req, res) => {
       return res.status(200).json({ status: false, message: t('error.insufficientBalance') });
 
     await client.query(`UPDATE users SET balance = balance - $1 WHERE id = $2`, [amount, userId]);
-
     await client.query(`
-      INSERT INTO transactions (user_id, amount, type, status, remark) 
+      INSERT INTO transactions (user_id, amount, type, status, remark)
       VALUES ($1, $2, 'PURCHASE', 'APPROVED', $3)
-    `, [userId, -amount, `#O_${orderId}`]);
+    `, [userId, -amount, `#O_${orderId}_PURCHASE`]);
 
+    const reward = amount + commission;
+    await client.query(`UPDATE users SET balance = balance + $1 WHERE id = $2`, [reward, userId]);
+    await client.query(`
+      INSERT INTO transactions (user_id, amount, type, status, remark)
+      VALUES ($1, $2, 'COMMISSION', 'APPROVED', $3)
+    `, [userId, reward, `#O_${orderId}_COMMISSION`]);
+
+    // 3️⃣ 更新订单状态
     await client.query(`
       UPDATE orders 
-      SET review_rating = $1, review_comment = $2, completed_at = CURRENT_TIMESTAMP, status = 'COMPLETED'
+      SET review_rating = $1, review_comment = $2, completed_at = NOW(), status = 'COMPLETED'
       WHERE id = $3
     `, [rating, comment, orderId]);
 
+    // 4️⃣ 更新 cycle 佣金
     await client.query(`
       UPDATE cycles 
-      SET commission_amount = commission_amount + $1
+      SET commission_amount = COALESCE(commission_amount, 0) + $1
       WHERE id = $2
-    `, [commission, order.cycle_id]);
+    `, [commission, cycleId]);
 
-    res.json({ status: true });
+    // 5️⃣ 判断是否该关环
+    const c = await client.query(`
+      SELECT id, orders, cycle_size, status 
+      FROM cycles WHERE id = $1
+    `, [cycleId]);
+
+    const cycle = c.rows[0];
+    const completedCount = Array.isArray(cycle.orders) ? cycle.orders.length : 0;
+
+    // 🔥 若当前环中所有订单都完成 → 标记该环为结束
+    const completedOrders = await client.query(`
+      SELECT COUNT(*) FROM orders WHERE cycle_id = $1 AND status = 'COMPLETED'
+    `, [cycleId]);
+
+    const doneCount = parseInt(completedOrders.rows[0].count, 10);
+    if (doneCount >= parseInt(cycle.cycle_size, 10)) {
+      await client.query(`
+        UPDATE cycles 
+        SET status = FALSE, finished_at = NOW()
+        WHERE id = $1
+      `, [cycleId]);
+    }
+
+    res.json({ status: true, data: { reward: reward.toFixed(2) } });
+
   } catch (err) {
     console.error(`POST /orders/${orderId}/review`, err);
-    res.status(500).json({ status: false, message: "Server Error" });
+    res.status(500).json({ status: false, message: 'Server error' });
   }
 });
 
@@ -611,66 +656,6 @@ app.post('/update-profile-image', verifyToken, async (req, res) => {
     res.json({ status: true});
   } catch (err) {
     console.error('Update profile image error:', err);
-    res.status(500).json({ status: false, message: "Server Error" });
-  }
-});
-
-app.post('/claim-commission', verifyToken, async (req, res) => {
-  const userId = req.user.userId;
-  const lang = req.headers['accept-language'] || 'en';
-  const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
-
-  try {
-    // 找到当前 active cycle
-    const { rows } = await client.query(`
-      SELECT id, cycle_size, orders FROM cycles 
-      WHERE user_id = $1 AND status = TRUE 
-      ORDER BY id DESC LIMIT 1
-    `, [userId]);
-
-    if (!rows.length)
-      return res.status(200).json({ status: false, message: t('commission.claim.error.noActiveCycle') });
-
-    const current = rows[0];
-
-    if (current.orders.length < current.cycle_size)
-      return res.status(200).json({ status: false, message: t('commission.claim.error.notCompleted') });
-
-    // 检查是否已有未处理的 claim transaction
-    const pendingCheck = await client.query(`
-      SELECT 1 FROM transactions 
-      WHERE user_id = $1 AND type = 'COMMISSION'
-        AND cycle_id = $2
-        AND status = 'PENDING'
-        AND deleted_at IS NULL
-      LIMIT 1
-    `, [userId, current.id]);
-
-    if (pendingCheck.rowCount > 0) {
-      return res.status(200).json({ status: true, message: t('commission.alreadyClaimed') });
-    }
-
-    // 算佣金
-    const sumRes = await client.query(`
-      SELECT SUM(commission)::numeric(10,2) AS total 
-      FROM orders 
-      WHERE cycle_id = $1 AND user_id = $2 AND deleted_at IS NULL
-    `, [current.id, userId]);
-
-    const commission = parseFloat(sumRes.rows[0].total || 0);
-    if (commission <= 0)
-      return res.status(200).json({ status: false, message: t('commission.claim.error.noCommission') });
-
-    // 插入交易（PENDING）
-    await client.query(`
-      INSERT INTO transactions (user_id, cycle_id, type, amount, status, remark)
-      VALUES ($1, $2, 'COMMISSION', $3, 'PENDING', $4)
-    `, [userId, current.id, commission, "#C_"+current.id]);
-
-    res.status(200).json({ status: true, message: t('commission.alreadyClaimed') });
-
-  } catch (err) {
-    console.error('POST /claim-commission error:', err);
     res.status(500).json({ status: false, message: "Server Error" });
   }
 });
@@ -1013,18 +998,41 @@ app.post('/lucky_draw_spin', verifyToken, async (req, res) => {
 // Admin
 app.get('/users', verifyAdminToken, async (req, res) => {
   try {
-    const result = await client.query(`
+    const usersRes = await client.query(`
       SELECT id, username, password, security_pin, phone, email, gender,
         TO_CHAR(dob, 'YYYY-MM-DD') AS dob, balance, referral_code, referred_by,
-        status, can_withdraw, can_do_task, user_type, vip_level, credit_score, last_login, created_at
+        status, can_withdraw, can_do_task, user_type, vip_level, credit_score, last_login, created_at, is_demo
       FROM users
       WHERE user_type = 2 AND deleted_at IS NULL
       ORDER BY id ASC
     `);
 
+    const users = [];
+
+    for (const user of usersRes.rows) {
+      const cycleRes = await client.query(`
+        SELECT cycle_size, orders
+        FROM cycles
+        WHERE user_id = $1 AND status = TRUE AND deleted_at IS NULL
+        ORDER BY id DESC LIMIT 1
+      `, [user.id]);
+
+      let completion_ratio = '0/0';
+      if (cycleRes.rows.length > 0) {
+        const cycle = cycleRes.rows[0];
+        const currentCompleted = Array.isArray(cycle.orders) ? cycle.orders.length : 0;
+        completion_ratio = `${currentCompleted}/${cycle.cycle_size}`;
+      }
+
+      users.push({
+        ...user,
+        completion_ratio
+      });
+    }
+
     res.json({
       status: true,
-      data: result.rows
+      data: users
     });
   } catch (err) {
     console.error('Error fetching admin users:', err);
@@ -1033,6 +1041,46 @@ app.get('/users', verifyAdminToken, async (req, res) => {
       error: 'Failed to fetch users'
     });
   }
+});
+
+app.post('/create-demo', verifyToken, async (req, res) => {
+  // 随机用户名 (a-z, A-Z, 0-9, 6位)
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let username = '';
+  for (let i = 0; i < 6; i++) {
+    username += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+
+  const password = Math.random().toString(36).substring(2, 10);
+
+  // 随机 4 位 security_pin
+  const security_pin = Math.floor(1000 + Math.random() * 9000).toString();
+
+  // 生成唯一 referral_code 使用现有函数
+  let selfReferralCode;
+  while (true) {
+    const tempCode = generateReferralCode();
+    const check = await client.query('SELECT 1 FROM users WHERE referral_code = $1', [tempCode]);
+    if (check.rowCount === 0) {
+      selfReferralCode = tempCode;
+      break;
+    }
+  }
+
+  const result = await client.query(
+    `INSERT INTO users (username, password, security_pin, is_demo, referral_code, created_at)
+     VALUES ($1, $2, $3, true, $4, CURRENT_TIMESTAMP)
+     RETURNING id, username, security_pin, is_demo, referral_code`,
+    [username, password, security_pin, selfReferralCode]
+  );
+
+  res.json({
+    status: true,
+    data: {
+      username: result.rows[0].username,
+      password: password,
+    }
+  });
 });
 
 app.get('/config', verifyAdminToken, async (req, res) => {
@@ -1116,6 +1164,26 @@ app.patch('/user/:id', verifyAdminToken, async (req, res) => {
   }
 });
 
+app.delete('/user/:id', verifyAdminToken, async (req, res) => {
+  try {
+    const { rows } = await client.query(`
+      UPDATE users
+      SET deleted_at = NOW()
+      WHERE id = $1 AND deleted_at IS NULL
+      RETURNING id
+    `, [req.params.id]);
+
+    if (!rows.length) {
+      return res.status(200).json({ status: false, message: 'Not found or already deleted' });
+    }
+
+    res.json({ status: true, data: { id: rows[0].id } });
+  } catch (err) {
+    console.error(`DELETE /user/${req.params.id}`, err);
+    res.status(500).json({ status: false, message: 'Server error' });
+  }
+});
+
 app.get('/tasks', verifyAdminToken, async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 50;
@@ -1166,13 +1234,13 @@ app.get('/tasks/:id', verifyAdminToken, async (req, res) => {
 });
 
 app.post('/tasks', verifyAdminToken, async (req, res) => {
-  const { productName, imageUrl, taskDescription, productPrice, blockerPrice } = req.body;
+  const { productName, imageUrl, taskDescription} = req.body;
   try {
     const result = await client.query(
-      `INSERT INTO tasks (product_name, image_url, product_description, product_price, blocker_price)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO tasks (product_name, image_url, product_description)
+       VALUES ($1, $2, $3)
        RETURNING *`,
-      [productName, imageUrl, taskDescription, productPrice, blockerPrice]
+      [productName, imageUrl, taskDescription]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -1183,18 +1251,16 @@ app.post('/tasks', verifyAdminToken, async (req, res) => {
 
 app.put('/tasks/:id', verifyAdminToken, async (req, res) => {
   const { id } = req.params;
-  const { productName, imageUrl, taskDescription, productPrice, blockerPrice } = req.body;
+  const { productName, imageUrl, taskDescription } = req.body;
   try {
     const result = await client.query(
       `UPDATE tasks 
        SET product_name = $1, 
            image_url = $2, 
            product_description = $3,
-           product_price = $4,
-           blocker_price = $5
-       WHERE id = $6 AND deleted_at IS NULL 
+       WHERE id = $4 AND deleted_at IS NULL 
        RETURNING *`,
-      [productName, imageUrl, taskDescription, productPrice, blockerPrice, id]
+      [productName, imageUrl, taskDescription, id]
     );
     if (!result.rows.length) return res.status(200).json({ status: false, message: 'Task not found' });
     res.json(result.rows[0]);

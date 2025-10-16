@@ -109,23 +109,9 @@
   "tasks.notice.title": "重要通知",
   "tasks.notice.hours": "服务时间：7:00 AM – 12:30 AM",
   "tasks.notice.support": "有关申请人的问题，请联系支持团队。",
-  "tasks.claimComm": "领取佣金",
 
   "proceed.tnc.notice": "继续操作即表示您同意",
   "proceed.tnc.link": "条款与条件",
-
-  "commModal.title": "领取佣金",
-  "commModal.message": "你即将领取以下佣金：",
-  "commModal.completed": "你已完成当前任务周期。",
-  "commModal.progress": "任务进度：",
-  "commModal.amount": "总佣金：",
-  "commModal.cancel": "取消",
-  "commModal.confirm": "确认",
-
-  "commission.alreadyClaimed": "佣金已提交，等待批准中",
-  "commission.claim.error.noActiveCycle": "当前没有活跃周期。",
-  "commission.claim.error.notCompleted": "任务周期尚未完成。",
-  "commission.claim.error.noCommission": "没有可领取的佣金。",
 
   "records.title": "任务记录",
   "records.pending": "待审核",
