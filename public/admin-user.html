@@ -525,7 +525,7 @@
         const createdDate = new Date(new Date(user.created_at).getTime() + 8 * 60 * 60 * 1000);
         html += `
           <tr>
-            <td>${i + 1}</td>
+            <td>${user.id}</td>
             <td>${user.username} ${isDemo} </td>
             <td><span class="badge bg-warning text-dark">${user.vip_level}</span></td>
             <td>${user.credit_score}</td>
