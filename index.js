@@ -1011,7 +1011,7 @@ app.get('/users', verifyAdminToken, async (req, res) => {
 
     for (const user of usersRes.rows) {
       const cycleRes = await client.query(`
-        SELECT cycle_size, orders
+        SELECT id, cycle_size, orders
         FROM cycles
         WHERE user_id = $1 AND status = TRUE AND deleted_at IS NULL
         ORDER BY id DESC LIMIT 1
@@ -1020,8 +1020,19 @@ app.get('/users', verifyAdminToken, async (req, res) => {
       let completion_ratio = '0/0';
       if (cycleRes.rows.length > 0) {
         const cycle = cycleRes.rows[0];
-        const currentCompleted = Array.isArray(cycle.orders) ? cycle.orders.length : 0;
-        completion_ratio = `${currentCompleted}/${cycle.cycle_size}`;
+        const orderIds = Array.isArray(cycle.orders) ? cycle.orders : [];
+
+        let completedCount = 0;
+        if (orderIds.length > 0) {
+          const ordersRes = await client.query(`
+            SELECT COUNT(*) AS completed_count
+            FROM orders
+            WHERE id = ANY($1::int[]) AND status = 'COMPLETED'
+          `, [orderIds]);
+          completedCount = parseInt(ordersRes.rows[0].completed_count, 10);
+        }
+
+        completion_ratio = `${completedCount}/${cycle.cycle_size}`;
       }
 
       users.push({
