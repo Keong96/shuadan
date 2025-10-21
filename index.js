@@ -1964,11 +1964,32 @@ app.get('/draw_record', verifyAdminToken, async (req, res) => {
 
 app.get('/config', verifyAdminToken, async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM config ORDER BY key ASC');
+    const { rows } = await client.query('SELECT * FROM config ORDER BY key ASC');
     res.json(rows);
   } catch (err) {
     console.error('Error fetching config:', err);
     res.status(500).json({ status:false, message: 'Failed to fetch config' });
+  }
+});
+
+app.post('/config/:key', verifyAdminToken, async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { value } = req.body;
+
+    const result = await client.query(
+      `UPDATE config SET value = $1 WHERE key = $2 RETURNING *`,
+      [value, key]
+    );
+
+    if (!result.rowCount) {
+      return res.status(404).json({ status: false, message: '配置不存在' });
+    }
+
+    res.json({ status: true, message: '保存成功', data: result.rows[0] });
+  } catch (err) {
+    console.error('Error saving config:', err);
+    res.status(500).json({ status: false, message: '保存失败' });
   }
 });
 

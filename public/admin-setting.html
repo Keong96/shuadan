@@ -126,11 +126,24 @@
       });
     }
 
-    async function saveConfig(key) {
-      const value = document.getElementById(`val-${key}`).value;
-      await axios.post(`/api/config/${encodeURIComponent(key)}`, { value });
-      loadConfig();
-    }
+    document.getElementById('configTableBody').addEventListener('click', function(e) {
+      const btn = e.target.closest('.save-config');
+      if (!btn) return;
+
+      const key = btn.dataset.key;
+      const textarea = document.getElementById(`config-${key}`);
+      if (!textarea) return;
+
+      const value = textarea.value;
+      axios.post(`/config/${encodeURIComponent(key)}`, { value }, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(res => {
+        alert('保存成功');
+      }).catch(err => {
+        console.error(err);
+        alert('保存失败');
+      });
+    });
 
     loadConfig();
     
