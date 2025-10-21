@@ -191,7 +191,6 @@ app.post('/register', async (req, res) => {
     return res.status(200).json({ status: false, message: t('error.missing_fields') });
 
   try {
-    // Check if username exists
     const check = await client.query(
       'SELECT id FROM users WHERE username = $1 AND deleted_at IS NULL',
       [username]
@@ -200,7 +199,6 @@ app.post('/register', async (req, res) => {
       return res.status(200).json({ status: false, message: t('error.register.usernameTaken') });
 
     let referred_by = null;
-
     if (referralCode) {
       const ref = await client.query(
         'SELECT id FROM users WHERE referral_code = $1 AND deleted_at IS NULL',
@@ -210,13 +208,12 @@ app.post('/register', async (req, res) => {
     }
 
     let selfReferralCode;
-
     while (true) {
-      const tempCode = generateReferralCode()
-      const check = await client.query('SELECT 1 FROM users WHERE referral_code = $1', [tempCode])
+      const tempCode = generateReferralCode();
+      const check = await client.query('SELECT 1 FROM users WHERE referral_code = $1', [tempCode]);
       if (check.rowCount === 0) {
-        selfReferralCode = tempCode
-        break
+        selfReferralCode = tempCode;
+        break;
       }
     }
 
@@ -235,6 +232,25 @@ app.post('/register', async (req, res) => {
        VALUES ($1,$2,$3,$4,$5,NOW())`,
       [userId, 10.00, 'DEPOSIT', 'APPROVED', 'New User Benefit']
     );
+
+    // === Create empty cycle after registration ===
+    const ures = await client.query("SELECT vip_level, balance FROM users WHERE id = $1", [userId]);
+    const vipLevel = (ures.rows[0] && ures.rows[0].vip_level) ? ures.rows[0].vip_level : 'BASIC';
+    const userBalance = parseFloat(ures.rows[0] && ures.rows[0].balance) || 0;
+
+    const vipCfg = vipTiers[vipLevel] || vipTiers['BASIC'] || { cycle_size: 20, commission_rate: 0.03 };
+    const vipCycleSize = parseInt(vipCfg.cycle_size, 10) || 20;
+    const vipCommissionRate = parseFloat(vipCfg.commission_rate) || 0.03;
+
+    const blockerIndexes = globalBlockers || [12, 15, 18];
+    const blockerArray = blockerIndexes.length ? blockerIndexes : null;
+
+    await client.query(
+      `INSERT INTO cycles (user_id, cycle_size, blocker_indexes, commission_rate, commission_amount, orders, status, created_at)
+       VALUES ($1, $2, $3, $4, 0, '{}', TRUE, NOW())`,
+      [userId, vipCycleSize, blockerArray, vipCommissionRate]
+    );
+    // === End cycle creation ===
 
     res.json({ status: true, message: t('success.register') });
   } catch (err) {
@@ -266,7 +282,7 @@ app.get('/me', verifyToken, async (req, res) => {
       ORDER BY id DESC LIMIT 1
     `, [userId]);
 
-    let completion_ratio = '0/0';
+    let completion_ratio = '0/20';
     if (cycleRes.rows.length > 0) {
       const cycle = cycleRes.rows[0];
       const currentCompleted = Array.isArray(cycle.orders) ? cycle.orders.length : 0;
@@ -386,52 +402,90 @@ app.post('/orders', verifyToken, async (req, res) => {
   const userId = req.user.userId;
 
   try {
-    // 读取必要 config：vip_tiers, blocker_indexes
     const cfgRes = await client.query(
       "SELECT key, value FROM config WHERE key IN ('vip_tiers','blocker_indexes')"
     );
     const cfgMap = Object.fromEntries(cfgRes.rows.map(r => [r.key, r.value || '']));
 
-    // 解析 vip_tiers JSON
     let vipTiers = {};
     try { vipTiers = JSON.parse(cfgMap.vip_tiers || '{}'); } catch (e) { vipTiers = {}; }
 
-    // 解析 blocker_indexes -> 数组 of int
     const blockerIndexes = (cfgMap.blocker_indexes || '')
       .split(',')
       .map(s => parseInt(s.trim(), 10))
       .filter(n => !Number.isNaN(n));
 
-    // 读取用户 vip_level 和 balance（若无，默认 BASIC / 0）
     const ures = await client.query("SELECT vip_level, balance FROM users WHERE id = $1", [userId]);
     const vipLevel = (ures.rows[0] && ures.rows[0].vip_level) ? ures.rows[0].vip_level : 'BASIC';
     const userBalance = parseFloat(ures.rows[0] && ures.rows[0].balance) || 0;
 
-    // 取该 vip 的配置（如果没在 config 里，做 fallback）
     const vipCfg = vipTiers[vipLevel] || vipTiers['BASIC'] || { cycle_size: 20, commission_rate: 0.03 };
     const vipCycleSize = parseInt(vipCfg.cycle_size, 10) || 20;
     const vipCommissionRate = parseFloat(vipCfg.commission_rate) || 0.03;
 
-    // 查找激活周期（status = TRUE）
+    // 查找激活周期
     let cr = await client.query(
       "SELECT id, orders, cycle_size, blocker_indexes, commission_amount, commission_rate FROM cycles WHERE user_id = $1 AND status = TRUE AND deleted_at IS NULL ORDER BY id DESC LIMIT 1",
       [userId]
     );
     let cycle = cr.rows[0];
 
-    // 如果没有激活周期，就按用户 vip 创建一个新的
+    // 若无激活周期 -> 创建新周期并生成所有订单
     if (!cycle) {
-      const blockerArray = blockerIndexes.length ? blockerIndexes : null; // pass null if empty
+      const blockerArray = blockerIndexes.length ? blockerIndexes : null;
       const ins = await client.query(
         `INSERT INTO cycles (user_id, cycle_size, blocker_indexes, commission_rate, commission_amount, orders, status, created_at)
-         VALUES ($1, $2, $3, $4, 0, '{}', TRUE, NOW())
-         RETURNING id, orders, cycle_size, blocker_indexes, commission_amount, commission_rate`,
+         VALUES ($1,$2,$3,$4,0,'{}',TRUE,NOW())
+         RETURNING id, cycle_size, commission_rate, blocker_indexes`,
         [userId, vipCycleSize, blockerArray, vipCommissionRate]
       );
       cycle = ins.rows[0];
+      const cycleId = cycle.id;
+
+      const taskRes = await client.query("SELECT id FROM tasks WHERE deleted_at IS NULL");
+      if (taskRes.rowCount === 0) return res.json({ status: false, message: 'No available tasks' });
+      const availableTasks = taskRes.rows;
+      const orderIds = [];
+      let totalCommission = 0;
+
+      // 生成所有订单
+      for (let i = 0; i < vipCycleSize; i++) {
+        const t = availableTasks[i % availableTasks.length];
+        const idx = i + 1;
+        const isBlocker = Array.isArray(blockerIndexes) && blockerIndexes.includes(idx);
+        let amount;
+
+        if (isBlocker) {
+          const mult = 1.10 + Math.random() * 0.10;
+          amount = parseFloat((userBalance * mult).toFixed(2));
+          if (amount <= userBalance) amount = parseFloat((userBalance + 1).toFixed(2));
+          if (userBalance <= 0) amount = 1.00;
+        } else {
+          const pct = 0.05 + Math.random() * 0.04; // 5%~9%
+          amount = parseFloat((userBalance * pct).toFixed(2));
+          if (amount <= 0) amount = 1.00;
+        }
+
+        const commission = parseFloat((amount * vipCommissionRate).toFixed(2));
+
+        const or = await client.query(
+          `INSERT INTO orders (user_id, cycle_id, task_id, amount, commission, status, created_at)
+           VALUES ($1,$2,$3,$4,$5,'PENDING',NOW()) RETURNING id`,
+          [userId, cycleId, t.id, amount, commission]
+        );
+        orderIds.push(or.rows[0].id);
+        totalCommission += commission;
+      }
+
+      await client.query(
+        `UPDATE cycles SET orders = $1, commission_amount = $2 WHERE id = $3`,
+        [orderIds, totalCommission, cycleId]
+      );
+
+      return res.json({ status: true, message: 'New cycle created', cycleId, orders: orderIds.length });
     }
 
-    // 检查是否已有未完成的 pending 订单
+    // 若已有周期但有 pending 订单 -> 返回该订单
     const pending = await client.query(
       `SELECT o.id, o.amount, o.commission, t.product_name, t.product_description, t.image_url
        FROM orders o
@@ -455,44 +509,30 @@ app.post('/orders', verifyToken, async (req, res) => {
       });
     }
 
-    // 计算 idx，判断是否是 blocker
+    // 若没有 pending -> 正常生成下一个订单
     const completedCount = Array.isArray(cycle.orders) ? cycle.orders.length : 0;
     const idx = completedCount + 1;
     const cycleBlockers = Array.isArray(cycle.blocker_indexes) ? cycle.blocker_indexes : blockerIndexes;
     const isBlocker = Array.isArray(cycleBlockers) && cycleBlockers.includes(idx);
 
-    // 随机选 task（仅用于 product metadata，价格不再从 tasks 读取）
     const taskRes = await client.query("SELECT id, product_name, product_description, image_url FROM tasks WHERE deleted_at IS NULL ORDER BY RANDOM() LIMIT 1");
-    if (taskRes.rowCount === 0) {
-      return res.status(200).json({ status: false, message: 'No available tasks' });
-    }
+    if (taskRes.rowCount === 0) return res.json({ status: false, message: 'No available tasks' });
     const task = taskRes.rows[0];
 
-    // 计算金额（基于 userBalance，而非 tasks 中的硬编码价格）
     let amount;
     if (isBlocker) {
-      // blocker 必须大于用户现有余额。使用 110% - 120% 的区间（保证高于余额）
-      const mult = 1.10 + Math.random() * 0.10; // 1.10 - 1.20
+      const mult = 1.10 + Math.random() * 0.10;
       amount = parseFloat((userBalance * mult).toFixed(2));
-      // 若 userBalance 为 0，确保有一个合理值（设为 1.00）
-      if (amount <= userBalance) {
-        amount = parseFloat((userBalance + 1).toFixed(2));
-      }
+      if (amount <= userBalance) amount = parseFloat((userBalance + 1).toFixed(2));
     } else {
-      // 普通订单：大约用户余额的 5% - 10%
-      const pct = 0.05 + Math.random() * 0.05; // 0.05 - 0.10
+      const pct = 0.05 + Math.random() * 0.05;
       amount = parseFloat((userBalance * pct).toFixed(2));
-      // 如果余额太小导致 amount 为 0，使用最低 1.00 作为回退
       if (amount <= 0) amount = 1.00;
     }
 
-    if (Number.isNaN(amount) || !isFinite(amount)) return res.status(200).json({ status: false, message: 'Invalid computed price' });
-
-    // 佣金以 cycle.commission_rate（已经为小数）计算
     const commissionRate = parseFloat(cycle.commission_rate || vipCommissionRate) || vipCommissionRate;
     const commission = parseFloat((amount * commissionRate).toFixed(2));
 
-    // 插入订单（状态 PENDING），并把 order id append 到 cycles.orders
     const or = await client.query(
       `INSERT INTO orders (user_id, cycle_id, task_id, amount, commission, status, created_at)
        VALUES ($1, $2, $3, $4, $5, 'PENDING', NOW())
@@ -500,7 +540,6 @@ app.post('/orders', verifyToken, async (req, res) => {
       [userId, cycle.id, task.id, amount, commission]
     );
 
-    // 更新 cycle.orders 并累加 commission_amount
     await client.query(
       `UPDATE cycles 
        SET orders = array_append(COALESCE(orders, '{}'), $1),
@@ -509,7 +548,6 @@ app.post('/orders', verifyToken, async (req, res) => {
       [or.rows[0].id, commission, cycle.id]
     );
 
-    // 返回新订单给前端
     res.json({
       status: true,
       data: {
@@ -521,7 +559,6 @@ app.post('/orders', verifyToken, async (req, res) => {
         productImage: task.image_url
       }
     });
-
   } catch (err) {
     console.error('/orders error:', err);
     res.status(500).json({ status: false, message: 'Server error' });
@@ -1106,7 +1143,7 @@ app.post('/create-demo', verifyToken, async (req, res) => {
     );
 
     const userId = userRes.rows[0].id;
-    let remainingBalance = parseFloat(userRes.rows[0].balance);
+    let baseBalance = parseFloat(userRes.rows[0].balance);
     const cycleSize = 20;
     const blockerArray = blockerIndexes.length ? blockerIndexes : null;
 
@@ -1149,12 +1186,12 @@ app.post('/create-demo', verifyToken, async (req, res) => {
       let amount;
       if (isBlocker) {
         const mult = 1.10 + Math.random() * 0.10;
-        amount = parseFloat((remainingBalance * mult).toFixed(2));
-        if (amount <= remainingBalance) amount = parseFloat((remainingBalance + 1).toFixed(2));
-        if (remainingBalance <= 0) amount = 1.00;
+        amount = parseFloat((baseBalance * mult).toFixed(2));
+        if (amount <= baseBalance) amount = parseFloat((baseBalance + 1).toFixed(2));
+        if (baseBalance <= 0) amount = 1.00;
       } else {
-        const pct = 0.05 + Math.random() * 0.05;
-        amount = parseFloat((remainingBalance * pct).toFixed(2));
+        const pct = 0.05 + Math.random() * 0.04; // 推荐 5% - 9%（如需其它区间改这里）
+        amount = parseFloat((baseBalance * pct).toFixed(2));
         if (amount <= 0) amount = 1.00;
       }
 
@@ -1162,23 +1199,15 @@ app.post('/create-demo', verifyToken, async (req, res) => {
 
       const or = await client.query(
         `INSERT INTO orders (user_id, cycle_id, task_id, amount, commission, status, created_at)
-         VALUES ($1,$2,$3,$4,$5,'PENDING',NOW()) RETURNING id`,
+        VALUES ($1,$2,$3,$4,$5,'PENDING',NOW()) RETURNING id`,
         [userId, cycleId, t.id, amount, commission]
       );
       orderIds.push(or.rows[0].id);
-      remainingBalance = Math.max(0, parseFloat((remainingBalance - amount).toFixed(2)));
     }
 
-    // 汇总佣金
-    const commRes = await client.query(
-      `SELECT COALESCE(SUM(commission),0)::numeric(12,2) AS s FROM orders WHERE id = ANY($1::int[])`,
-      [orderIds]
-    );
-    const commissionSum = parseFloat(commRes.rows[0].s) || 0.00;
-
     await client.query(
-      `UPDATE cycles SET orders = $1, commission_amount = COALESCE(commission_amount,0) + $2 WHERE id = $3`,
-      [orderIds, commissionSum, cycleId]
+      `UPDATE cycles SET orders = $1 WHERE id = $2`,
+      [orderIds, cycleId]
     );
 
     return res.json({
@@ -1858,6 +1887,17 @@ app.get('/team/:id', verifyAdminToken, async (req, res) => {
   try {
     const { id } = req.params;
 
+    // 查该用户的上线
+    const uplineRes = await client.query(
+      `SELECT u2.username AS upline_username
+       FROM users u1
+       LEFT JOIN users u2 ON u1.referred_by = u2.id
+       WHERE u1.id = $1`,
+      [id]
+    );
+    const upline_username = uplineRes.rows[0]?.upline_username || '无上线';
+
+    // 查该用户的下线
     const { rows } = await client.query(`
       SELECT
         u.id,
@@ -1880,9 +1920,10 @@ app.get('/team/:id', verifyAdminToken, async (req, res) => {
       commission_amount: Number(r.downline_commission) * 0.25
     }));
 
-    res.json({ status: true, data });
+    res.json({ status: true, upline_username, data });
+
   } catch (err) {
-    console.error('Error fetching admin team:', err);
+    console.error('Error fetching team:', err);
     res.status(500).json({ status: false, message: 'Failed to fetch team' });
   }
 });

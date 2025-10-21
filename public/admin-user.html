@@ -293,20 +293,13 @@
           <hr>
           <!-- 设置表单 -->
           <div class="mb-2 d-flex align-items-center">
-            <label class="form-label me-2 mb-0" style="width: 100px;">任务环大小</label>
-            <input type="number" id="modalCycleSize" class="form-control form-control-sm">
+            <label class="form-label me-2 mb-0">任务单数: <span id="modalCycleSize"></span></label>
           </div>
-
           <div class="mb-2 d-flex align-items-center">
-            <label class="form-label me-2 mb-0" style="width: 100px;">卡单位置</label>
-            <input type="text" id="modalBlockers" class="form-control form-control-sm">
+            <label class="form-label me-2 mb-0">佣金比例: <span id="modalCommission"></span></label>
           </div>
 
-          <div class="mb-3 d-flex align-items-center">
-            <label class="form-label me-2 mb-0" style="width: 100px;">佣金比例</label>
-            <input type="text" id="modalCommission" class="form-control form-control-sm">
-          </div>
-          <button class="btn btn-success btn w-100 mb-3" id="modalSaveBtn">更改</button>
+          <br>
 
           <h3>订单列表</h3>
           <hr>
@@ -321,8 +314,8 @@
                   <th>#</th>
                   <th class="text-nowrap text-center">产品照片</th>
                   <th class="text-nowrap text-center">产品名称</th>
-                  <th class="text-nowrap text-center">产品价格</th>
                   <th class="text-nowrap text-center">完成时间</th>
+                  <th class="text-nowrap text-center">产品价格</th>
                   <th class="text-nowrap text-center">佣金比例</th>
                   <th class="text-nowrap text-center">佣金</th>
                   <th class="text-nowrap text-center" style="min-width:80px">操作</th>
@@ -347,6 +340,12 @@
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
+          <div id="teamUpline" class="mb-2">
+            我的上线: <span id="teamUplineName" class="text-info">加载中...</span>
+          </div>
+          <div id="teamDownlineLabel" class="mb-2">
+            我的下线:
+          </div>
           <div class="table-responsive">
             <table class="table table-dark table-striped text-center mb-0">
               <thead>
@@ -669,9 +668,8 @@
         }
 
         // 预填设置
-        document.getElementById('modalCycleSize').value = activeCycle.cycle_size || '';
-        document.getElementById('modalBlockers').value = (activeCycle.blocker_indexes || []).join(',');
-        document.getElementById('modalCommission').value = activeCycle.commission_rate || 0;
+        document.getElementById('modalCycleSize').innerHTML = activeCycle.cycle_size || '';
+        document.getElementById('modalCommission').innerHTML = (activeCycle.commission_rate || 0)+"%";
 
         currentModalCycleId = activeCycle.id;
 
@@ -696,10 +694,10 @@
               <td class='text-center'>${index + 1}</td>
               <td class='text-center'>${imgHtml}</td>
               <td class='text-center'>${o.product_name || '-'}</td>
-              <td class='text-center'>${amount.toFixed(2)}</td>
               <td class='text-center'>${completedText}</td>
+              <td class='text-center'>$${amount.toFixed(2)}</td>
               <td class='text-center'>${ratePct.toFixed(2)}%</td>
-              <td class='text-center'>${commission.toFixed(2)}</td>
+              <td class='text-center'>$${commission.toFixed(2)}</td>
               <td class='text-center'>
                 <button class="btn btn-outline-warning btn-sm" onclick="makeRowEditable(this)">
                   <i class="bi bi-pencil-square"></i>
@@ -757,16 +755,21 @@
 
       const tbody = teamModal.querySelector('#teamTableBody');
       const owner = teamModal.querySelector('#teamOwner');
+      const upline = teamModal.querySelector('#teamUplineName');
       const totalCommEl = document.getElementById('totalCommissionValue');
 
       if (owner) owner.textContent = `（${username}）`;
       tbody.innerHTML = `<tr><td colspan="3" class="text-muted">加载中...</td></tr>`;
       if (totalCommEl) totalCommEl.textContent = '$0.00';
+      if (upline) upline.textContent = '加载中...';
 
       try {
         const { data } = await axios.get(`${window.location.origin}/team/${userId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
+
+        const uplineName = data?.upline_username || '无上线';
+        if (upline) upline.textContent = uplineName;
 
         const list = data?.data || [];
         if (!list.length) {
@@ -790,6 +793,7 @@
         if (totalCommEl) totalCommEl.textContent = `$${total.toFixed(2)}`;
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="3" class="text-danger">加载失败</td></tr>`;
+        if (upline) upline.textContent = '加载失败';
       }
     });
     
@@ -911,44 +915,49 @@
       const cells = row.querySelectorAll('td');
       const table = row.closest('table');
 
-      // 保存原始内容
-      row.dataset.originalAmount = cells[3].textContent.trim();
-      row.dataset.originalRate = cells[5].textContent.trim();
-      row.dataset.originalCommission = cells[6].textContent.trim();
+      // 列索引（0-based）
+      // 0: #, 1: 照片, 2: 名称, 3: 完成时间, 4: 产品价格, 5: 佣金比例, 6: 佣金, 7: 操作
+      row.dataset.originalAmount = (cells[4].textContent || '').replace('$', '').trim();
+      row.dataset.originalRate = (cells[5].textContent || '').replace('%', '').trim();
+      row.dataset.originalCommission = (cells[6].textContent || '').replace('$', '').trim();
 
-      // 可编辑字段
-      const amountCell = cells[3];
+      const amountCell = cells[4];
       const commissionRateCell = cells[5];
       const commissionCell = cells[6];
 
       const originalAmount = parseFloat(row.dataset.originalAmount) || 0;
-      const originalRate = parseFloat(row.dataset.originalRate) || 0;
+      const originalRate = parseFloat(row.dataset.originalRate) || 0; // already in percent units (e.g. 10 => 10%)
 
-      // helper: 重新计算佣金并更新单元格
+      // 重新计算佣金并刷新单元格与总计
       function recalcCommission() {
-        const amount = parseFloat(row.querySelector('td:nth-child(4) input').value) || 0;
-        const rate = parseFloat(row.querySelector('td:nth-child(6) input').value) || 0;
-        const commission = amount * rate / 100;
-        commissionCell.textContent = commission.toFixed(2);
-
-        // 更新总计
-        updateCycleCommission(table);
+        const amountInput = row.querySelector('td:nth-child(5) input'); // 5th column (1-based)
+        const rateInput = row.querySelector('td:nth-child(6) input');   // 6th column (1-based)
+        const amount = parseFloat(amountInput ? amountInput.value : 0) || 0;
+        const rate = parseFloat(rateInput ? rateInput.value : 0) || 0; // percent
+        const commission = amount * (rate / 100);
+        commissionCell.textContent = `$${commission.toFixed(2)}`;
+        if (typeof updateCycleCommission === 'function') updateCycleCommission(table);
       }
 
+      // amount input (产品价格)
       amountCell.innerHTML = `
         <input type="number" step="0.01" class="form-control form-control-sm"
-              value="${originalAmount}" oninput="this.closest('tr').recalcCommission()">
+              value="${originalAmount.toFixed(2)}" oninput="this.closest('tr').recalcCommission()">
       `;
 
+      // rate input (佣金比例) 显示为百分号后缀
       commissionRateCell.innerHTML = `
-        <input type="number" step="0.01" class="form-control form-control-sm"
-              value="${originalRate}" oninput="this.closest('tr').recalcCommission()">
+        <div class="input-group input-group-sm">
+          <input type="number" step="0.01" class="form-control form-control-sm"
+                value="${originalRate.toFixed(2)}" oninput="this.closest('tr').recalcCommission()">
+          <span class="input-group-text">%</span>
+        </div>
       `;
 
-      // 把函数挂到当前行，oninput 可用
+      // 挂载函数，供 oninput 调用
       row.recalcCommission = recalcCommission;
 
-      // 替换按钮
+      // 替换操作按钮为保存/取消
       cells[7].innerHTML = `
         <button class="btn btn-outline-success btn-sm" onclick="saveRow(this, '${id}')">
           <i class="bi bi-check-lg"></i>
@@ -957,15 +966,18 @@
           <i class="bi bi-x-lg"></i>
         </button>
       `;
-    }
 
+      // 立即计算一次，确保佣金显示正确
+      recalcCommission();
+    }
+    
     function saveRow(btn, id) {
       const row = btn.closest('tr');
+      const table = row.closest('table');
       const inputs = row.querySelectorAll('input');
       const newAmount = parseFloat(inputs[0].value) || 0;
       const newRate = parseFloat(inputs[1].value) || 0;
 
-      // 计算新佣金
       const newCommission = newAmount * newRate / 100;
 
       axios.put(`/orders/${id}`, {
@@ -974,13 +986,14 @@
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       }).then(res => {
-        // 更新表格
-        row.querySelectorAll('td')[3].textContent = newAmount.toFixed(2);
-        row.querySelectorAll('td')[5].textContent = newRate.toFixed(2);
-        row.querySelectorAll('td')[6].textContent = newCommission.toFixed(2);
+        // 更新行内容
+        const cells = row.querySelectorAll('td');
+        cells[4].textContent = "$" + newAmount.toFixed(2);
+        cells[5].textContent = newRate.toFixed(2) + "%";
+        cells[6].textContent = "$" + newCommission.toFixed(2);
 
-        // 按钮复原
-        row.querySelectorAll('td')[7].innerHTML = `
+        // 恢复按钮
+        cells[7].innerHTML = `
           <button class="btn btn-outline-warning btn-sm" onclick="makeRowEditable(this)">
             <i class="bi bi-pencil-square"></i>
           </button>
@@ -989,8 +1002,13 @@
           </button>
         `;
 
-        // 同步刷新 cycle 总佣金
-        updateCycleCommission(row.closest('table'));
+        // 更新当前行的数据属性
+        row.dataset.originalAmount = newAmount.toFixed(2);
+        row.dataset.originalRate = newRate.toFixed(2);
+        row.dataset.originalCommission = newCommission.toFixed(2);
+
+        // 重新计算整个周期总佣金（仅计算已完成的）
+        updateCycleCommission(table);
       }).catch(err => {
         console.error(err);
         alert('保存失败');
@@ -1001,10 +1019,9 @@
       const row = btn.closest('tr');
       const cells = row.querySelectorAll('td');
 
-      // 还原原始值
-      cells[3].textContent = row.dataset.originalAmount;
-      cells[5].textContent = row.dataset.originalRate;
-      cells[6].textContent = row.dataset.originalCommission;
+      cells[4].textContent = "$"+row.dataset.originalAmount;     // 产品价格
+      cells[5].textContent = row.dataset.originalRate+"%";       // 佣金比例
+      cells[6].textContent = "$"+row.dataset.originalCommission; // 佣金
       
       cells[7].innerHTML = `
         <button class="btn btn-outline-warning btn-sm" onclick="makeRowEditable(this)">
@@ -1019,23 +1036,24 @@
     function updateCycleCommission(table) {
       const rows = table.querySelectorAll('tbody tr');
       let total = 0;
+
       rows.forEach(r => {
         const cells = r.querySelectorAll('td');
         if (cells.length >= 7 && !r.classList.contains('table-success')) {
-          const completedText = cells[4]?.textContent?.trim() || "";
-          // 排除未完成
-          if (completedText !== "未完成") {
-            const val = parseFloat(cells[6].textContent);
+          const completedText = (cells[3]?.textContent || "").trim();
+          // 只计算“已完成”的行
+          if (completedText && completedText !== "未完成") {
+            const val = parseFloat((cells[6].textContent || "").replace('$', '').trim());
             if (!isNaN(val)) total += val;
           }
         }
       });
+
       const summaryRow = table.querySelector('tr.table-success td:last-child');
       if (summaryRow) summaryRow.textContent = total.toFixed(2);
     }
 
     const createDemoModal = document.getElementById('createDemoModal');
-
     createDemoModal.addEventListener('show.bs.modal', () => {
       document.getElementById('demoUsername').value = '';
       document.getElementById('demoPassword').value = '';
