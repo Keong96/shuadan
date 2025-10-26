@@ -1407,7 +1407,7 @@
     function populateTaskRecord(orders) {
       const section = document.getElementById('section-records')
       section.innerHTML = `
-        <h5 class="mb-3 px-3 text-white">
+        <h5 class="mb-3 px-3 text-dark">
           <i class="bi bi-clock-history me-2"></i>
           <span data-i18n="records.title">Task Records</span>
         </h5>
@@ -1415,7 +1415,7 @@
 
       if (!orders.length) {
         section.innerHTML += `
-          <div class="text-center text-white small mt-4" data-i18n="records.empty">
+          <div class="text-center text-dark small mt-4" data-i18n="records.empty">
             No more records.
           </div>`
         return
