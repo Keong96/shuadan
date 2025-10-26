@@ -377,21 +377,35 @@ app.get('/my-transactions', verifyToken, async (req, res) => {
 
 app.get('/orders', verifyToken, async (req, res) => {
   const userId = req.user.userId;
-  const lang = req.headers['accept-language'] || 'en';
 
   try {
-    const result = await client.query(`
-      SELECT 
-        o.id, o.amount, o.commission, o.status, o.created_at,
-        t.product_name, t.image_url
-      FROM orders o
-      JOIN tasks t ON o.task_id = t.id
-      WHERE o.user_id = $1 AND o.deleted_at IS NULL
-      ORDER BY o.created_at DESC
-    `, [userId]);
+    const query = `
+      (
+        SELECT o.id, o.amount, o.commission, o.status, o.created_at,
+               t.product_name, t.image_url
+        FROM orders o
+        JOIN tasks t ON o.task_id = t.id
+        WHERE o.user_id = $1 
+          AND o.status = 'COMPLETED'
+          AND o.deleted_at IS NULL
+      )
+      UNION ALL
+      (
+        SELECT o.id, o.amount, o.commission, o.status, o.created_at,
+               t.product_name, t.image_url
+        FROM orders o
+        JOIN tasks t ON o.task_id = t.id
+        WHERE o.user_id = $1 
+          AND o.status = 'PENDING'
+          AND o.deleted_at IS NULL
+        ORDER BY o.created_at ASC
+        LIMIT 1
+      )
+      ORDER BY created_at DESC
+    `;
 
+    const result = await client.query(query, [userId]);
     res.json({ status: true, data: result.rows });
-
   } catch (err) {
     console.error('GET /orders', err);
     res.status(500).json({ status: false, message: 'Server error' });
