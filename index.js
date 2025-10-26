@@ -191,6 +191,7 @@ app.post('/register', async (req, res) => {
     return res.status(200).json({ status: false, message: t('error.missing_fields') });
 
   try {
+    // 检查用户名是否存在
     const check = await client.query(
       'SELECT id FROM users WHERE username = $1 AND deleted_at IS NULL',
       [username]
@@ -198,6 +199,7 @@ app.post('/register', async (req, res) => {
     if (check.rowCount > 0)
       return res.status(200).json({ status: false, message: t('error.register.usernameTaken') });
 
+    // 获取推荐人
     let referred_by = null;
     if (referralCode) {
       const ref = await client.query(
@@ -207,6 +209,7 @@ app.post('/register', async (req, res) => {
       if (ref.rowCount > 0) referred_by = ref.rows[0].id;
     }
 
+    // 生成唯一推荐码
     let selfReferralCode;
     while (true) {
       const tempCode = generateReferralCode();
@@ -217,6 +220,30 @@ app.post('/register', async (req, res) => {
       }
     }
 
+    // === 从 config 表加载 vip_tiers ===
+    const vipCfgRes = await client.query("SELECT value FROM config WHERE key = 'vip_tiers' LIMIT 1");
+    let vipTiers = {};
+    if (vipCfgRes.rowCount > 0) {
+      try {
+        vipTiers = JSON.parse(vipCfgRes.rows[0].value);
+      } catch (e) {
+        console.error('Invalid JSON in vip_tiers config:', e);
+        vipTiers = {};
+      }
+    }
+
+    // === 从 config 表加载 global_blockers ===
+    const blockCfgRes = await client.query("SELECT value FROM config WHERE key = 'global_blockers' LIMIT 1");
+    let globalBlockers = [12, 15, 18];
+    if (blockCfgRes.rowCount > 0) {
+      try {
+        globalBlockers = JSON.parse(blockCfgRes.rows[0].value);
+      } catch (e) {
+        console.error('Invalid JSON in global_blockers config:', e);
+      }
+    }
+
+    // === 创建用户 ===
     const insertUser = await client.query(
       `INSERT INTO users 
         (username, password, security_pin, phone, email, gender, dob, referral_code, referred_by, status, user_type, balance, created_at)
@@ -227,30 +254,28 @@ app.post('/register', async (req, res) => {
 
     const userId = insertUser.rows[0].id;
 
+    // === 初始赠送记录 ===
     await client.query(
       `INSERT INTO transactions (user_id, amount, type, status, remark, created_at)
        VALUES ($1,$2,$3,$4,$5,NOW())`,
       [userId, 10.00, 'DEPOSIT', 'APPROVED', 'New User Benefit']
     );
 
-    // === Create empty cycle after registration ===
+    // === 获取 VIP 等级与配置 ===
     const ures = await client.query("SELECT vip_level, balance FROM users WHERE id = $1", [userId]);
     const vipLevel = (ures.rows[0] && ures.rows[0].vip_level) ? ures.rows[0].vip_level : 'BASIC';
-    const userBalance = parseFloat(ures.rows[0] && ures.rows[0].balance) || 0;
-
     const vipCfg = vipTiers[vipLevel] || vipTiers['BASIC'] || { cycle_size: 20, commission_rate: 0.03 };
+
     const vipCycleSize = parseInt(vipCfg.cycle_size, 10) || 20;
     const vipCommissionRate = parseFloat(vipCfg.commission_rate) || 0.03;
+    const blockerArray = Array.isArray(globalBlockers) && globalBlockers.length ? globalBlockers : [12, 15, 18];
 
-    const blockerIndexes = globalBlockers || [12, 15, 18];
-    const blockerArray = blockerIndexes.length ? blockerIndexes : null;
-
+    // === 创建首个空 cycle ===
     await client.query(
       `INSERT INTO cycles (user_id, cycle_size, blocker_indexes, commission_rate, commission_amount, orders, status, created_at)
        VALUES ($1, $2, $3, $4, 0, '{}', TRUE, NOW())`,
       [userId, vipCycleSize, blockerArray, vipCommissionRate]
     );
-    // === End cycle creation ===
 
     res.json({ status: true, message: t('success.register') });
   } catch (err) {
