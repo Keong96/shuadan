@@ -176,10 +176,11 @@
           </div>
 
           <!-- Pagination Controls -->
-          <div id="pagination" class="d-flex justify-content-center mt-3"></div>
+          <div id="pagination" class="d-flex mt-3"></div>
         </div>
       </div>
     </div>
+  </div>
 
   <!-- Edit User Modal -->
   <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
@@ -601,7 +602,7 @@
 
     function renderPagination(pagination) {
       const container = document.getElementById('pagination');
-      if (!container || !pagination || pagination.totalPages <= 1) {
+      if (!container || !pagination) {
         container.innerHTML = '';
         return;
       }
@@ -615,6 +616,11 @@
             ${i}
           </button>
         `;
+      }
+
+      // 如果总页数为0，至少显示1
+      if (pagination.totalPages === 0) {
+        html = `<button class="btn btn-sm btn-primary" onclick="loadUsers(1, currentSearch)">1</button>`;
       }
 
       container.innerHTML = html;

@@ -1023,8 +1023,23 @@ app.post('/lucky_draw_spin', verifyToken, async (req, res) => {
 app.get('/users', verifyAdminToken, async (req, res) => {
   try {
     const { page, limit, search } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 50;
+    const offset = (pageNum - 1) * limitNum;
     const hasSearch = search && search.trim() !== '';
 
+    // 查询总数
+    let countQuery = 'SELECT COUNT(*) FROM users WHERE user_type = 2 AND deleted_at IS NULL';
+    const countParams = [];
+    if (hasSearch) {
+      countQuery += ' AND username ILIKE $1';
+      countParams.push(`%${search}%`);
+    }
+    const countRes = await client.query(countQuery, countParams);
+    const totalUsers = parseInt(countRes.rows[0].count, 10);
+    const totalPages = Math.ceil(totalUsers / limitNum);
+
+    // 查询数据
     let usersQuery = `
       SELECT id, username, password, security_pin, phone, email, gender,
         TO_CHAR(dob, 'YYYY-MM-DD') AS dob, balance, referral_code, referred_by,
@@ -1032,27 +1047,17 @@ app.get('/users', verifyAdminToken, async (req, res) => {
       FROM users
       WHERE user_type = 2 AND deleted_at IS NULL
     `;
-
     const params = [];
-
     if (hasSearch) {
-      usersQuery += ` AND username ILIKE $1`;
+      usersQuery += ' AND username ILIKE $1';
       params.push(`%${search}%`);
     }
-
-    usersQuery += ` ORDER BY id ASC`;
-
-    // 只有有搜索才分页
-    if (hasSearch && page && limit) {
-      const offset = (parseInt(page) - 1) * parseInt(limit);
-      usersQuery += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-      params.push(parseInt(limit), offset);
-    }
+    usersQuery += ` ORDER BY id ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limitNum, offset);
 
     const usersRes = await client.query(usersQuery, params);
 
     const users = [];
-
     for (const user of usersRes.rows) {
       const cycleRes = await client.query(`
         SELECT id, cycle_size, orders
@@ -1079,22 +1084,22 @@ app.get('/users', verifyAdminToken, async (req, res) => {
         completion_ratio = `${completedCount}/${cycle.cycle_size}`;
       }
 
-      users.push({
-        ...user,
-        completion_ratio
-      });
+      users.push({ ...user, completion_ratio });
     }
 
     res.json({
       status: true,
-      data: users
+      data: users,
+      pagination: {
+        page: pageNum,
+        totalPages,
+        totalUsers,
+        limit: limitNum
+      }
     });
   } catch (err) {
     console.error('Error fetching admin users:', err);
-    res.status(500).json({
-      status: false,
-      error: 'Failed to fetch users'
-    });
+    res.status(500).json({ status: false, error: 'Failed to fetch users' });
   }
 });
 
