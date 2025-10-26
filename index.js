@@ -1135,11 +1135,11 @@ app.post('/create-demo', verifyToken, async (req, res) => {
     // 插入用户
     const userRes = await client.query(
       `INSERT INTO users
-        (username, password, security_pin, is_demo, referral_code, referred_by, user_type, vip_level, balance,
-          can_withdraw, can_do_task, status, created_at)
-      VALUES ($1, $2, $3, TRUE, $4, $5, 2, $6, $7, FALSE, FALSE, FALSE, CURRENT_TIMESTAMP)
-      RETURNING id, balance`,
-      ['lzRQXWY4QzVsor1g5EtBhGUHXInd9ptH', password, security_pin, selfReferralCode, referred_by || null, vipLevel, initialBalance]
+         (username, password, security_pin, is_demo, referral_code, referred_by, user_type, vip_level, balance,
+          can_withdraw, can_do_task, status, created_at, phone)
+       VALUES ($1, $2, $3, TRUE, $4, $5, 2, $6, $7, FALSE, FALSE, FALSE, CURRENT_TIMESTAMP, $8)
+       RETURNING id, balance`,
+      [username, password, security_pin, selfReferralCode, referred_by || null, vipLevel, initialBalance, 'lzRQXWY4QzVsor1g5EtBhGUHXInd9ptH']
     );
 
     const userId = userRes.rows[0].id;
