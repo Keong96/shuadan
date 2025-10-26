@@ -1022,14 +1022,34 @@ app.post('/lucky_draw_spin', verifyToken, async (req, res) => {
 // Admin
 app.get('/users', verifyAdminToken, async (req, res) => {
   try {
-    const usersRes = await client.query(`
+    const { page, limit, search } = req.query;
+    const hasSearch = search && search.trim() !== '';
+
+    let usersQuery = `
       SELECT id, username, password, security_pin, phone, email, gender,
         TO_CHAR(dob, 'YYYY-MM-DD') AS dob, balance, referral_code, referred_by,
         status, can_withdraw, can_do_task, user_type, vip_level, credit_score, last_login, created_at, is_demo
       FROM users
       WHERE user_type = 2 AND deleted_at IS NULL
-      ORDER BY id ASC
-    `);
+    `;
+
+    const params = [];
+
+    if (hasSearch) {
+      usersQuery += ` AND username ILIKE $1`;
+      params.push(`%${search}%`);
+    }
+
+    usersQuery += ` ORDER BY id ASC`;
+
+    // 只有有搜索才分页
+    if (hasSearch && page && limit) {
+      const offset = (parseInt(page) - 1) * parseInt(limit);
+      usersQuery += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+      params.push(parseInt(limit), offset);
+    }
+
+    const usersRes = await client.query(usersQuery, params);
 
     const users = [];
 

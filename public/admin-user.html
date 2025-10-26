@@ -147,7 +147,15 @@
             创建测试账号
           </button>
         </div>
-    
+
+        <!-- Search bar -->
+        <div class="input-group mb-3" style="max-width: 400px;">
+          <input id="searchInput" type="text" class="form-control bg-dark text-white border-secondary"
+                placeholder="输入用户名搜索">
+          <button id="searchBtn" class="btn btn-primary">搜索</button>
+          <button id="resetBtn" class="btn btn-outline-light">重置</button>
+        </div>
+
         <div class="card p-3">
           <div class="table-responsive">
             <table class="table table-dark table-hover align-middle">
@@ -163,18 +171,15 @@
                   <th class="text-nowrap">操作</th>
                 </tr>
               </thead>
-              <tbody id="userBody">
-
-              </tbody>  
+              <tbody id="userBody"></tbody>
             </table>
           </div>
 
-           <!-- Pagination Controls -->
-           <div class="paginator" style="margin-top: 10px; text-align: center;"></div>
+          <!-- Pagination Controls -->
+          <div id="pagination" class="d-flex justify-content-center mt-3"></div>
         </div>
       </div>
     </div>
-  </div>
 
   <!-- Edit User Modal -->
   <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
@@ -495,139 +500,141 @@
       window.stop()
     }
 
-    axios.get(`${window.location.origin}/users`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    .then(res => {
-      if (!res.data.status) return;
+    let currentPage = 1;
+    const limit = 50;
+    let currentSearch = '';
 
-      const users = res.data.data;
-      const tbody = document.getElementById('userBody');
-      if (!tbody) return;
+    function loadUsers(page = 1, search = '') {
+      axios.get(`${window.location.origin}/users?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => {
+        if (!res.data.status) return;
+        
+        const users = res.data.data;
+        const tbody = document.getElementById('userBody');
+        if (!tbody) return;
+
+        let html = '';
+        for (let i = 0; i < users.length; i++) {
+          const user = users[i];
+
+          const statusClass = user.status ? 'btn-success' : 'btn-danger';
+          const statusText = user.status ? '启用' : '禁用';
+
+          const canWithdrawClass = user.can_withdraw ? 'btn-success' : 'btn-danger';
+          const canWithdrawText = user.can_withdraw ? '允许提现' : '禁止提现';
+
+          const canDoTaskClass = user.can_do_task ? 'btn-success' : 'btn-danger';
+          const canDoTaskText = user.can_do_task ? '允许接单' : '禁止接单';
+
+          const isDemo = user.is_demo ? '<span class="badge bg-info text-dark">DEMO</span>' : '';
+
+          html += `
+            <tr>
+              <td>${user.id}</td>
+              <td>${user.username} ${isDemo}</td>
+              <td><span class="badge bg-warning text-dark">${user.vip_level}</span></td>
+              <td>${user.credit_score}</td>
+              <td>${parseFloat(user.balance).toFixed(2)}</td>
+              <td class="text-nowrap">
+                <button class="btn ${statusClass} btn-sm statusBtn" data-id="${user.id}" data-field="status">${statusText}</button>
+                <button class="btn ${canWithdrawClass} btn-sm statusBtn" data-id="${user.id}" data-field="can_withdraw">${canWithdrawText}</button>
+                <button class="btn ${canDoTaskClass} btn-sm statusBtn" data-id="${user.id}" data-field="can_do_task">${canDoTaskText}</button>
+              </td>
+              <td>${user.completion_ratio}</td>
+              <td class="text-nowrap">
+                <button class="btn btn-sm btn-warning text-dark me-1" data-bs-toggle="modal" data-bs-target="#editUserModal"
+                  data-id="${user.id}" data-username="${user.username}" data-referral-code="${user.referral_code}"
+                  data-vip-level="${user.vip_level}" data-credit-score="${user.credit_score}"
+                  data-balance="${user.balance}" data-password="${user.password || ''}"
+                  data-security-pin="${user.security_pin || ''}" data-phone="${user.phone || ''}"
+                  data-email="${user.email || ''}" data-gender="${user.gender || ''}" data-dob="${user.dob || ''}">
+                  基本资料
+                </button>
+                <button class="btn btn-sm btn-info me-1" data-bs-toggle="modal" data-bs-target="#cycleOrdersModal" data-id="${user.id}">
+                  订单设置
+                </button>
+                <button class="btn btn-sm btn-light me-1" data-bs-toggle="modal" data-bs-target="#teamModal" data-id="${user.id}" data-username="${user.username}">
+                  查看团队
+                </button>
+                <button class="btn btn-sm btn-secondary me-1" data-bs-toggle="modal" data-bs-target="#checkInModal" data-id="${user.id}" data-username="${user.username}">
+                  签到记录
+                </button>
+                <button class="btn btn-sm btn-danger me-1" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" data-id="${user.id}">
+                  删除用户
+                </button>
+              </td>
+            </tr>
+          `;
+        }
+
+        tbody.innerHTML = html;
+
+        document.querySelectorAll('.statusBtn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const userId = btn.dataset.id;
+            const field = btn.dataset.field;
+            const newValue = !btn.classList.contains('btn-success');
+
+            axios.patch(`${window.location.origin}/user/${userId}`, { [field]: newValue }, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+            .then(() => {
+              btn.classList.toggle('btn-success', newValue);
+              btn.classList.toggle('btn-danger', !newValue);
+
+              let text = '';
+              if (field === 'status') text = newValue ? '启用' : '禁用';
+              if (field === 'can_withdraw') text = newValue ? '允许提现' : '禁止提现';
+              if (field === 'can_do_task') text = newValue ? '允许交易' : '禁止交易';
+              btn.textContent = text;
+            })
+            .catch(err => console.error('Update failed:', err));
+          });
+        });
+
+        renderPagination(res.data.pagination);
+      })
+      .catch(err => console.error('User load failed:', err));
+    }
+
+    function renderPagination(pagination) {
+      const container = document.getElementById('pagination');
+      if (!container || !pagination || pagination.totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+      }
 
       let html = '';
-
-      for (let i = 0; i < users.length; i++) {
-        const user = users[i];
-
-        const statusClass = user.status ? 'btn-success' : 'btn-danger';
-        const statusText = user.status ? '启用' : '禁用';
-
-        const canWithdrawClass = user.can_withdraw ? 'btn-success' : 'btn-danger';
-        const canWithdrawText = user.can_withdraw ? '允许提现' : '禁止提现';
-
-        const canDoTaskClass = user.can_do_task ? 'btn-success' : 'btn-danger';
-        const canDoTaskText = user.can_do_task ? '允许接单' : '禁止接单';
-
-        const isDemo = user.is_demo === true ? '<span class="badge bg-info text-dark">DEMO</span>' : '';
-
-        // <button 
-        //   class="btn btn-sm btn-warning" 
-        //   data-bs-toggle="modal" 
-        //   data-bs-target="#confirmResetModal" 
-        //   data-id="${user.id}">
-        //   重置任务
-        // </button>
-
-        const createdDate = new Date(new Date(user.created_at).getTime() + 8 * 60 * 60 * 1000);
+      for (let i = 1; i <= pagination.totalPages; i++) {
         html += `
-          <tr>
-            <td>${user.id}</td>
-            <td>${user.username} ${isDemo} </td>
-            <td><span class="badge bg-warning text-dark">${user.vip_level}</span></td>
-            <td>${user.credit_score}</td>
-            <td>${parseFloat(user.balance).toFixed(2)}</td>
-            <td class="text-nowrap">
-              <button class="btn ${statusClass} btn-sm statusBtn" data-id="${user.id}" data-field="status">${statusText}</button>
-              <button class="btn ${canWithdrawClass} btn-sm statusBtn" data-id="${user.id}" data-field="can_withdraw">${canWithdrawText}</button>
-              <button class="btn ${canDoTaskClass} btn-sm statusBtn" data-id="${user.id}" data-field="can_do_task">${canDoTaskText}</button>
-            </td>
-            <td> ${user.completion_ratio} </td>
-            <td class="text-nowrap">
-            <button 
-              class="btn btn-sm btn-warning text-dark me-1" 
-              data-bs-toggle="modal" 
-              data-bs-target="#editUserModal"
-              data-id="${user.id}"
-              data-username="${user.username}"
-              data-referral-code="${user.referral_code}"
-              data-vip-level="${user.vip_level}"
-              data-credit-score="${user.credit_score}"
-              data-balance="${user.balance}"
-              data-password="${user.password || ''}"
-              data-security-pin="${user.security_pin || ''}"
-              data-phone="${user.phone || ''}"
-              data-email="${user.email || ''}"
-              data-gender="${user.gender || ''}"
-              data-dob="${user.dob || ''}">
-              基本资料
-            </button>
-
-            <button 
-              class="btn btn-sm btn-info me-1" 
-              data-bs-toggle="modal" 
-              data-bs-target="#cycleOrdersModal"
-              data-id="${user.id}">
-              订单设置
-            </button>
-
-            <button 
-              class="btn btn-sm btn-light me-1" 
-              data-bs-toggle="modal" 
-              data-bs-target="#teamModal"
-              data-id="${user.id}"
-              data-username="${user.username}">
-              查看团队
-            </button>
-
-            <button 
-              class="btn btn-sm btn-secondary me-1" 
-              data-bs-toggle="modal" 
-              data-bs-target="#checkInModal"
-              data-id="${user.id}"
-              data-username="${user.username}">
-              签到记录
-            </button>
-
-            <button 
-              class="btn btn-sm btn-danger me-1" 
-              data-bs-toggle="modal" 
-              data-bs-target="#confirmDeleteModal" 
-              data-id="${user.id}">
-              删除用户
-            </button>
-          </td>
-          </tr>
+          <button 
+            class="btn btn-sm ${i === pagination.page ? 'btn-primary' : 'btn-outline-primary'} me-1"
+            onclick="loadUsers(${i}, currentSearch)">
+            ${i}
+          </button>
         `;
       }
 
-      tbody.innerHTML = html;
+      container.innerHTML = html;
+    }
 
-      document.querySelectorAll('.statusBtn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const userId = btn.dataset.id;
-          const field = btn.dataset.field;
-          const newValue = !btn.classList.contains('btn-success');
+    document.getElementById('searchBtn').addEventListener('click', () => {
+      const input = document.getElementById('searchInput');
+      currentSearch = input.value.trim();
+      currentPage = 1;
+      loadUsers(currentPage, currentSearch);
+    });
 
-          axios.patch(`${window.location.origin}/user/${userId}`, { [field]: newValue }, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          .then(() => {
-            btn.classList.toggle('btn-success', newValue);
-            btn.classList.toggle('btn-danger', !newValue);
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('searchInput').value = '';
+      currentSearch = '';
+      currentPage = 1;
+      loadUsers(currentPage);
+    });
 
-            let text = '';
-            if (field === 'status') text = newValue ? '启用' : '禁用';
-            if (field === 'can_withdraw') text = newValue ? '允许提现' : '禁止提现';
-            if (field === 'can_do_task') text = newValue ? '允许交易' : '禁止交易';
-
-            btn.textContent = text;
-          })
-          .catch(err => console.error('Update failed:', err));
-        });
-      });
-    })
-    .catch(err => console.error('User load failed:', err));
+    window.addEventListener('DOMContentLoaded', () => loadUsers());
 
     const editModal = document.getElementById('editUserModal');
     editModal.addEventListener('show.bs.modal', event => {
