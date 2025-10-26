@@ -521,6 +521,14 @@
 
         const isDemo = user.is_demo === true ? '<span class="badge bg-info text-dark">DEMO</span>' : '';
 
+        // <button 
+        //   class="btn btn-sm btn-warning" 
+        //   data-bs-toggle="modal" 
+        //   data-bs-target="#confirmResetModal" 
+        //   data-id="${user.id}">
+        //   重置任务
+        // </button>
+
         const createdDate = new Date(new Date(user.created_at).getTime() + 8 * 60 * 60 * 1000);
         html += `
           <tr>
@@ -579,14 +587,6 @@
               data-id="${user.id}"
               data-username="${user.username}">
               签到记录
-            </button>
-
-            <button 
-              class="btn btn-sm btn-warning" 
-              data-bs-toggle="modal" 
-              data-bs-target="#confirmResetModal" 
-              data-id="${user.id}">
-              重置任务
             </button>
 
             <button 
