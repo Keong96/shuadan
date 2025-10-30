@@ -140,6 +140,8 @@
                 <th>用户名</th>
                 <th>数额</th>
                 <th>日期</th>
+                <th>贷款期限</th>
+                <th>利率</th>
                 <th>备注</th>
                 <th>操作</th>
               </tr>
@@ -239,6 +241,8 @@
               <td>${l.username || '-'}</td>
               <td class="text-warning">${Number(l.amount).toFixed(2)}</td>
               <td>${date}</td>
+              <td>${l.loan_term || '-'}</td>
+              <td>${l.interest_rate ? l.interest_rate + '%' : '-'}</td>
               <td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${l.remark || ''}">
                 ${l.remark || ''}
               </td>

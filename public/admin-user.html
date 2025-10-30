@@ -215,6 +215,13 @@
             </div>
 
             <div class="mb-3 row">
+              <label for="editUserDrawTicket" class="col-sm-4 col-form-label">抽奖卷</label>
+              <div class="col-sm-8">
+                <input id="editUserDrawTicket" name="balance" type="number" step="1" class="form-control bg-dark text-white border-secondary">
+              </div>
+            </div>
+
+            <div class="mb-3 row">
               <label for="editVipLevel" class="col-sm-4 col-form-label">VIP 等级</label>
               <div class="col-sm-8">
                 <select id="editVipLevel" name="vip_level" class="form-control bg-dark text-white border-secondary">
@@ -291,24 +298,10 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
       <div class="modal-content bg-dark text-white">
         <div class="modal-header">
-          <h5 class="modal-title">任务设置 & 订单列表</h5>
+          <h5 class="modal-title">任务设置</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <h3>任务设置</h3>
-          <hr>
-          <!-- 设置表单 -->
-          <div class="mb-2 d-flex align-items-center">
-            <label class="form-label me-2 mb-0">任务单数: <span id="modalCycleSize"></span></label>
-          </div>
-          <div class="mb-2 d-flex align-items-center">
-            <label class="form-label me-2 mb-0">佣金比例: <span id="modalCommission"></span></label>
-          </div>
-
-          <br>
-
-          <h3>订单列表</h3>
-          <hr>
           <div class="d-flex justify-content-end mb-2">
             <button class="btn btn-success btn-sm" id="addOrderBtn">新增订单</button>
           </div>
@@ -398,7 +391,6 @@
         </div>
         <div class="modal-body">
           <p>是否立即重置任务？<br>
-          关闭后将<strong>立刻分发佣金并创建新任务</strong>。</p>
         </div>
         <div class="modal-footer border-top border-secondary">
           <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">取消</button>
@@ -470,7 +462,7 @@
             <div class="mb-3 row">
               <label for="demoCommissionRate" class="col-sm-4 col-form-label">佣金比率 (%)</label>
               <div class="col-sm-8">
-                <input id="demoCommissionRate" name="commission_rate" type="number" step="0.01" class="form-control bg-dark text-white border-secondary" placeholder="例如：10" value="3">
+                <input id="demoCommissionRate" name="commission_rate" type="number" step="0.01" class="form-control bg-dark text-white border-secondary" placeholder="例如：10" value="0">
               </div>
             </div>
 
@@ -481,6 +473,42 @@
             <button type="button" id="createDemoBtn" class="btn btn-light text-dark" onclick="createDemoAccount()">创建</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lucky Draw Modal -->
+  <div class="modal fade" id="luckyDrawModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content bg-dark text-white">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title fw-bold">🎰 抽奖设置</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="关闭"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="table-responsive">
+            <table class="table table-dark table-striped align-middle text-center" id="luckyDrawTable">
+              <thead>
+                <tr>
+                  <th style="width:50px;">#</th>
+                  <th>奖品名称</th>
+                  <th style="width:120px;">概率</th>
+                  <th style="width:100px;">操作</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <button id="addLuckyRow" class="btn btn-sm btn-success mt-2">
+            <i class="bi bi-plus-lg"></i> 新增
+          </button>
+        </div>
+
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+          <button type="button" id="saveLuckyDraw" class="btn btn-primary">保存修改</button>
+        </div>
       </div>
     </div>
   </div>
@@ -525,19 +553,19 @@
 
           const canWithdrawClass = user.can_withdraw ? 'btn-success' : 'btn-danger';
           const canWithdrawText = user.can_withdraw ? '允许提现' : '禁止提现';
-
           const canDoTaskClass = user.can_do_task ? 'btn-success' : 'btn-danger';
           const canDoTaskText = user.can_do_task ? '允许接单' : '禁止接单';
 
           const isDemo = user.is_demo ? '<span class="badge bg-info text-dark">DEMO</span>' : '';
-
+          const luckyDrawSetting = String(user.lucky_draw_setting || '[]').replace(/"/g, '&quot;')
+          
           html += `
             <tr>
               <td>${user.id}</td>
               <td>${user.username} ${isDemo}</td>
               <td><span class="badge bg-warning text-dark">${user.vip_level}</span></td>
               <td>${user.credit_score}</td>
-              <td>${parseFloat(user.balance).toFixed(2)}</td>
+              <td>${parseFloat(user.balance).toFixed(2)} ${user.balance_gap < 0 ? `<span class="text-danger">(${user.balance_gap})</span>` : ''}</td>
               <td class="text-nowrap">
                 <button class="btn ${statusClass} btn-sm statusBtn" data-id="${user.id}" data-field="status">${statusText}</button>
                 <button class="btn ${canWithdrawClass} btn-sm statusBtn" data-id="${user.id}" data-field="can_withdraw">${canWithdrawText}</button>
@@ -548,7 +576,7 @@
                 <button class="btn btn-sm btn-warning text-dark me-1" data-bs-toggle="modal" data-bs-target="#editUserModal"
                   data-id="${user.id}" data-username="${user.username}" data-referral-code="${user.referral_code}"
                   data-vip-level="${user.vip_level}" data-credit-score="${user.credit_score}"
-                  data-balance="${user.balance}" data-password="${user.password || ''}"
+                  data-balance="${user.balance}" data-draw-ticket="${user.draw_ticket}" data-password="${user.password || ''}"
                   data-security-pin="${user.security_pin || ''}" data-phone="${user.phone || ''}"
                   data-email="${user.email || ''}" data-gender="${user.gender || ''}" data-dob="${user.dob || ''}">
                   基本资料
@@ -561,6 +589,21 @@
                 </button>
                 <button class="btn btn-sm btn-secondary me-1" data-bs-toggle="modal" data-bs-target="#checkInModal" data-id="${user.id}" data-username="${user.username}">
                   签到记录
+                </button>
+                <button 
+                  class="btn btn-sm btn-warning" 
+                  data-bs-toggle="modal" 
+                  data-bs-target="#confirmResetModal" 
+                  data-id="${user.id}">
+                  重置任务
+                </button>
+                <button 
+                  class="btn btn-sm btn-primary" 
+                  data-bs-toggle="modal" 
+                  data-bs-target="#luckyDrawModal"
+                  data-id="${user.id}"
+                  data-setting="${luckyDrawSetting}">
+                  抽奖设置
                 </button>
                 <button class="btn btn-sm btn-danger me-1" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" data-id="${user.id}">
                   删除用户
@@ -651,6 +694,7 @@
       document.getElementById('editVipLevel').value = button.dataset.vipLevel || ''
       document.getElementById('editCreditScore').value = button.dataset.creditScore || ''
       document.getElementById('editUserBalance').value = parseFloat(button.dataset.balance || 0).toFixed(2);
+      document.getElementById('editUserDrawTicket').value = button.dataset.drawTicket || 0;
       document.getElementById('editPassword').value = button.dataset.password || ''
       document.getElementById('editSecurityPin').value = button.dataset.securityPin || ''
       document.getElementById('editUserPhone').value = button.dataset.phone || ''
@@ -679,10 +723,6 @@
           ordersBody.innerHTML = `<tr><td colspan="10" class="text-center text-warning">该用户没有进行中的任务环</td></tr>`;
           return;
         }
-
-        // 预填设置
-        document.getElementById('modalCycleSize').innerHTML = activeCycle.cycle_size || '';
-        document.getElementById('modalCommission').innerHTML = (activeCycle.commission_rate || 0)+"%";
 
         currentModalCycleId = activeCycle.id;
 
@@ -735,6 +775,10 @@
         console.error(err);
         ordersBody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">加载订单失败</td></tr>`;
       });
+    });
+
+    cycleOrdersModal.addEventListener('hide.bs.modal', function (event) {
+      window.location.reload();
     });
 
     document.getElementById('addOrderBtn').addEventListener('click', () => {
@@ -1071,10 +1115,10 @@
       document.getElementById('demoUsername').value = '';
       document.getElementById('demoPassword').value = '';
       document.getElementById('demoReferredBy').value = '';
-      document.getElementById('demoBalance').value = '0';
-      document.getElementById('demoCommissionRate').value = '10';
+      document.getElementById('demoBalance').value = '';
+      document.getElementById('demoCommissionRate').value = '';
     });
-
+    
     function createDemoAccount() {
       const username = document.getElementById('demoUsername').value.trim();
       const password = document.getElementById('demoPassword').value.trim();
@@ -1102,6 +1146,94 @@
         alert('创建测试账号失败。');
       });
     }
+
+    // 🎰 Lucky Draw Modal 控制逻辑
+    const luckyDrawModal = document.getElementById('luckyDrawModal');
+
+    // 打开 modal 时载入数据
+    luckyDrawModal.addEventListener('show.bs.modal', event => {
+      const button = event.relatedTarget;
+      luckyDrawModal.dataset.userId = button.dataset.id; // 绑定 userId
+      const raw = button?.dataset?.setting || '[]';
+      let data = [];
+      try {
+        data = JSON.parse(String(raw).replace(/&quot;/g, '"') || '[]');
+      } catch {
+        data = [];
+      }
+
+      const tbody = luckyDrawModal.querySelector('#luckyDrawTable tbody');
+      tbody.innerHTML = '';
+
+      data.forEach((item, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${i + 1}</td>
+          <td><input type="text" class="form-control form-control-sm name-input bg-dark text-white border-secondary text-center" value="${(item.name || '').replace(/"/g, '&quot;')}"></td>
+          <td><input type="number" class="form-control form-control-sm rate-input bg-dark text-white border-secondary text-center" value="${item.rate || 0}" min="0" step="0.01"></td>
+          <td><button type="button" class="btn btn-sm btn-danger remove-row"><i class="bi bi-trash"></i> 删除</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    });
+
+    // 新增奖项
+    document.getElementById('addLuckyRow').addEventListener('click', () => {
+      const tbody = document.querySelector('#luckyDrawTable tbody');
+      const index = tbody.children.length + 1;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${index}</td>
+        <td><input type="text" class="form-control form-control-sm name-input bg-dark text-white border-secondary text-center" value=""></td>
+        <td><input type="number" class="form-control form-control-sm rate-input bg-dark text-white border-secondary text-center" value="0" min="0" step="0.01"></td>
+        <td><button type="button" class="btn btn-sm btn-danger remove-row"><i class="bi bi-trash"></i> 删除</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // 删除奖项（事件委托）
+    document.addEventListener('click', e => {
+      const btn = e.target.closest('.remove-row');
+      if (!btn) return;
+      const tr = btn.closest('tr');
+      if (!tr) return;
+      tr.remove();
+      // 重新编号
+      document.querySelectorAll('#luckyDrawTable tbody tr').forEach((r, i) => {
+        const firstTd = r.querySelector('td');
+        if (firstTd) firstTd.textContent = i + 1;
+      });
+    });
+
+    // 保存按钮
+    document.getElementById('saveLuckyDraw').addEventListener('click', async () => {
+      const rows = document.querySelectorAll('#luckyDrawTable tbody tr');
+      const result = Array.from(rows).map(r => ({
+        name: (r.querySelector('.name-input')?.value || '').trim(),
+        rate: parseFloat(r.querySelector('.rate-input')?.value) || 0
+      }));
+
+      const json = JSON.stringify(result);
+      const userId = luckyDrawModal.dataset.userId || null;
+
+      try {
+        await axios.post('/update-lucky-draw', {
+          userId,
+          lucky_draw_setting: json
+        }, { headers: { Authorization: `Bearer ${token}` } });
+
+        alert('保存成功');
+        const modal = bootstrap.Modal.getInstance(luckyDrawModal);
+        if (modal) modal.hide();
+
+        // 同步更新按钮上的 data-setting，避免重新加载
+        const btn = document.querySelector(`[data-bs-target="#luckyDrawModal"][data-id="${userId}"]`);
+        if (btn) btn.dataset.setting = json.replace(/"/g, '&quot;');
+      } catch (err) {
+        console.error('保存失败:', err);
+        alert('保存失败');
+      }
+    });
 
     function Logout() {
       localStorage.removeItem("token");

@@ -10,6 +10,28 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="localization.js" defer></script>
+  
+  <script type="text/javascript">
+    window.$crisp = [];
+    window.CRISP_WEBSITE_ID = "a8cb42f7-382a-4883-916b-b526650af674";
+    window.$crisp.push(["on", "session:loaded", function() {
+      const style = document.createElement("style");
+      style.innerHTML = `
+        #crisp-chatbox-button {
+          bottom: 65px !important;
+          right: 20px !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }]);
+    (function() {
+      var d = document, s = d.createElement("script");
+      s.src = "https://client.crisp.chat/l.js";
+      s.async = 1;
+      d.getElementsByTagName("head")[0].appendChild(s);
+    })();
+  </script>
+  
   <style>
     html, body {
       height: 100%;
@@ -139,9 +161,9 @@
 </head>
 <body>
   <div class="login-body" id="loginBox">
+    <img src="/img/logo.png" alt="Logo" class="login-logo" style="display:block; margin:0 auto 20px; max-width:200px;">
     <h2 data-i18n="login.title">Welcome Back</h2>
     <p data-i18n="login.subtitle">Sign in now to explore more benefits</p>
-
     <div id="languageSelectWrapper" class="custom-select-wrapper">
       <div id="languageSelectTrigger" class="custom-select-trigger">Choose Language</div>
       <ul id="languageSelectOptions" class="custom-select-options">
@@ -183,8 +205,8 @@
         </div>
 
         <div class="position-relative">
-          <input name="phone" type="tel" class="form-control" placeholder="Phone Number" data-i18n-placeholder="register.phone">
-          <span class="input-icon"><i class="bi bi-telephone-fill"></i></span>
+          <input name="phone" type="tel" class="form-control" placeholder="Wallet Address" data-i18n-placeholder="register.wallet">
+          <span class="input-icon"><i class="bi bi-wallet2"></i></span>
         </div>
 
         <div class="position-relative">
@@ -440,17 +462,19 @@
 
     document.querySelectorAll('.toggle-password').forEach(toggle => {
       toggle.addEventListener('click', function () {
-        const input = this.previousElementSibling;
-        const icon = this.querySelector('i');
+        const container = this.closest('.position-relative')
+        const input = container.querySelector('input')
+        const icon = this.querySelector('i')
+
         if (input.type === 'password') {
-          input.type = 'text';
-          icon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill');
+          input.type = 'text'
+          icon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill')
         } else {
-          input.type = 'password';
-          icon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill');
+          input.type = 'password'
+          icon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill')
         }
-      });
-    });
+      })
+    })
 
     document.getElementById('switchToRegister').addEventListener('click', (e) => {
       e.preventDefault();

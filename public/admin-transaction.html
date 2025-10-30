@@ -136,9 +136,17 @@
           </button>
         </div>
 
+        <!-- Search bar -->
+        <div class="input-group mb-3" style="max-width: 400px;">
+          <input id="searchInput" type="text" class="form-control bg-dark text-white border-secondary"
+                placeholder="输入用户名搜索">
+          <button id="searchBtn" class="btn btn-primary">搜索</button>
+          <button id="resetBtn" class="btn btn-outline-light">重置</button>
+        </div>
+
         <div class="card p-3">
           <div class="table-responsive">
-            <table class="table table-dark table-hover align-middle mb-0">
+            <table class="table table-dark table-striped">
               <thead>
                 <tr>
                   <th>#</th>
@@ -154,6 +162,9 @@
               <tbody id="transactionBody"></tbody>
             </table>
           </div>
+
+          <!-- Pagination Controls -->
+          <div id="pagination" class="d-flex mt-3"></div>
         </div>
       </div>
     </div>
@@ -307,76 +318,109 @@
       loadTransactions();
     }
 
-    async function loadTransactions() {
+    let currentPage = 1;
+    let currentSearch = '';
+
+    async function loadTransactions(page = 1, search = '') {
       try {
-        const res = await axios.get('/transactions', { headers:{Authorization:`Bearer ${token}`} });
+        const res = await axios.get(`/transactions?page=${page}&limit=50&search=${encodeURIComponent(search)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
         const tbody = document.getElementById('transactionBody');
         tbody.innerHTML = '';
-        res.data.data.forEach((t,i) => {
-        const date = (t.created_at || '').split('T')[0];
+        const data = res.data.data || [];
 
-        // 金额颜色
-        const amountClass = Number(t.amount) >= 0 ? 'text-success' : 'text-danger';
+        data.forEach((t, i) => {
+          const date = (t.created_at || '').split('T')[0];
+          const amountClass = Number(t.amount) >= 0 ? 'text-success' : 'text-danger';
+          const typeBadge = {
+            DEPOSIT: '<span class="badge bg-success fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">充值</span>',
+            WITHDRAWAL: '<span class="badge bg-danger fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">提现</span>',
+            PURCHASE: '<span class="badge bg-secondary fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">订单</span>',
+            COMMISSION: '<span class="badge bg-warning text-dark fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">佣金</span>',
+            REFERRAL_BONUS: '<span class="badge bg-info text-dark fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">分成</span>',
+          }[t.type];
 
-        // 类型 Badge（加大+居中+内边距）
-        const typeBadge = {
-          DEPOSIT: '<span class="badge bg-success fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">充值</span>',
-          WITHDRAWAL: '<span class="badge bg-danger fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">提现</span>',
-          PURCHASE: '<span class="badge bg-secondary fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">订单</span>',
-          COMMISSION: '<span class="badge bg-warning text-dark fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">佣金</span>'
-        }[t.type];
+          const statusTextMap = {
+            APPROVED: '已批准',
+            REJECTED: '已拒绝',
+            PENDING: '待处理'
+          };
 
-        const statusTextMap = {
-          APPROVED: '已批准',
-          REJECTED: '已拒绝',
-          PENDING: '待处理'
-        };
+          const statusClassMap = {
+            APPROVED: 'btn-success',
+            REJECTED: 'btn-danger',
+            PENDING: 'btn-secondary'
+          };
 
-        const statusClassMap = {
-          APPROVED: 'btn-success',
-          REJECTED: 'btn-danger',
-          PENDING: 'btn-secondary'
-        };
-
-        const statusCell = (t.status === 'PENDING' && ['DEPOSIT', 'WITHDRAWAL', 'COMMISSION'].includes(t.type))
-          ? `
-            <button class="btn btn-sm btn-outline-success me-1" onclick="updateStatus(${t.id}, 'APPROVED')">
-              <i class="bi bi-check-lg"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-danger" onclick="updateStatus(${t.id}, 'REJECTED')">
-              <i class="bi bi-x-lg"></i>
-            </button>
-          `
-          : `
-            <span class="btn ${statusClassMap[t.status]} fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">
-              ${statusTextMap[t.status] || t.status}
-            </span>
-          `;
-
-        tbody.innerHTML += `
-          <tr>
-            <td>${i + 1}</td>
-            <td>${t.username}</td>
-            <td class="${amountClass}">${Number(t.amount).toFixed(2)}</td>
-            <td>${typeBadge}</td>
-            <td>${statusCell}</td>
-            <td>${date}</td>
-            <td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${t.remark || ''}">${t.remark || ''}</td>
-            <td>
-              <button 
-                class="btn btn-sm btn-danger" 
-                data-bs-toggle="modal" 
-                data-bs-target="#confirmDeleteModal" 
-                data-id="${t.id}">
-                <i class="bi bi-trash"></i>
+          const statusCell = (t.status === 'PENDING' && ['DEPOSIT', 'WITHDRAWAL', 'COMMISSION'].includes(t.type))
+            ? `
+              <button class="btn btn-sm btn-outline-success me-1" onclick="updateStatus(${t.id}, 'APPROVED')">
+                <i class="bi bi-check-lg"></i>
               </button>
-            </td>
-          </tr>`;
-      });
+              <button class="btn btn-sm btn-outline-danger" onclick="updateStatus(${t.id}, 'REJECTED')">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            `
+            : `
+              <span class="btn ${statusClassMap[t.status]} fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">
+                ${statusTextMap[t.status] || t.status}
+              </span>
+            `;
+
+          tbody.innerHTML += `
+            <tr>
+              <td>${(page - 1) * 10 + i + 1}</td>
+              <td style="width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.username}</td>
+              <td class="${amountClass}">${Number(t.amount).toFixed(2)}</td>
+              <td>${typeBadge}</td>
+              <td>${statusCell}</td>
+              <td>${date}</td>
+              <td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${t.remark || ''}">${t.remark || ''}</td>
+              <td>
+                <button 
+                  class="btn btn-sm btn-danger" 
+                  data-bs-toggle="modal" 
+                  data-bs-target="#confirmDeleteModal" 
+                  data-id="${t.id}">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>`;
+        });
+
+        renderPagination(res.data.pagination);
       } catch (err) {
         console.error('Failed to load /transactions', err);
       }
     }
+
+    function renderPagination({ page, totalPages }) {
+      const container = document.getElementById('pagination');
+      container.innerHTML = '';
+
+      if (totalPages <= 1) return;
+
+      for (let i = 1; i <= totalPages; i++) {
+        container.innerHTML += `
+          <button class="btn ${i === page ? 'btn-primary' : 'btn-outline-primary'} me-1"
+                  onclick="loadTransactions(${i}, currentSearch)">
+            ${i}
+          </button>`;
+      }
+    }
+
+    document.getElementById('searchBtn').addEventListener('click', () => {
+      currentSearch = document.getElementById('searchInput').value.trim();
+      loadTransactions(1, currentSearch);
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('searchInput').value = '';
+      currentSearch = '';
+      loadTransactions(1);
+    });
 
     async function updateStatus(id,status) {
       await axios.patch(`/transactions/${id}`, { status }, { headers:{Authorization:`Bearer ${token}`} });

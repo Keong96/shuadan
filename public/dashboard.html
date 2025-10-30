@@ -177,6 +177,21 @@
     .custom-select-options li:hover {
       background: #f1f1f1;
     }
+    #filterGroup .nav-link {
+      background-color: #007bff;
+      color: #fff;
+      margin-right: 0.3rem;
+    }
+
+    #filterGroup .nav-link.active {
+      background-color: #0056b3;
+      color: #fff;
+    }
+
+    #filterGroup .nav-link:hover {
+      background-color: #0069d9;
+      color: #fff;
+    }
     @keyframes marquee {
       0% { transform: translateX(0%); }
       100% { transform: translateX(-100%); }
@@ -300,12 +315,13 @@
 
       <!-- Filters -->
       <ul class="nav nav-pills nav-sm mb-3 flex-nowrap overflow-auto" id="filterGroup" style="white-space: nowrap; font-size: 0.8rem;">
-          <li class="nav-item"><a class="nav-link active" href="#" data-value="ALL">All</a></li>
-          <li class="nav-item"><a class="nav-link" href="#" data-value="DEPOSIT">Deposit</a></li>
-          <li class="nav-item"><a class="nav-link" href="#" data-value="PURCHASE">Purchase</a></li>
-          <li class="nav-item"><a class="nav-link" href="#" data-value="WITHDRAWAL">Withdrawal</a></li>
-          <li class="nav-item"><a class="nav-link" href="#" data-value="COMMISSION">Commission</a></li>
-        </ul>
+        <li class="nav-item"><a class="nav-link active" href="#" data-value="ALL">All</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" data-value="DEPOSIT">Deposit</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" data-value="PURCHASE">Purchase</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" data-value="WITHDRAWAL">Withdrawal</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" data-value="COMMISSION">Commission</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" data-value="REFERRAL_BONUS">Referral Bonus</a></li>
+      </ul>
 
       <!-- Scrollable Table -->
       <div style="overflow-y: auto;">
@@ -371,7 +387,7 @@
               <span data-i18n="tasks.completion">Completion</span>
             </div>
           </div>
-          <button id="btnOptimize" class="btn btn-primary btn-wide" data-bs-toggle="modal" data-bs-target="#taskModal" data-i18n="tasks.optimize" onclick="takeOrder()">Optimize</button>
+          <button id="btnOptimize" class="btn btn-primary btn-wide" data-i18n="tasks.optimize" onclick="takeOrder()">Optimize</button>
         </div>
       </div>
 
@@ -402,6 +418,12 @@
       <!-- Profile Card -->
       <div class="card mb-3">
         <div class="card-body text-center">
+          <button class="btn btn-light p-1 rounded-circle position-absolute top-0 end-0 m-2"
+            data-bs-toggle="modal" data-bs-target="#vipModal"
+            title="Info"
+            style="z-index:9999;">
+            <i class="bi bi-question-circle"></i>
+          </button>
           <label for="profileUpload" style="cursor: pointer;">
             <img id="profileImage" src="img/default_user.png" class="rounded-circle mb-2" 
                 style="width:80px; height:80px; object-fit:cover;">
@@ -613,18 +635,21 @@
           <!-- Loan History -->
           <div class="mb-3">
             <label class="small text-muted" data-i18n="funds.loan.history">Previous Applications</label>
-            <div class="table-responsive" style="max-height: 200px; overflow-y:auto;">
+            <div class="table-responsive" style="max-height: 250px; overflow-y:auto;">
               <table class="table table-sm table-striped table-hover text-center mb-0">
                 <thead class="table-light">
                   <tr>
                     <th>ID</th>
                     <th data-i18n="funds.loan.date">Date</th>
                     <th data-i18n="funds.loan.amount">Amount</th>
+                    <th data-i18n="funds.loan.term">Term</th>
+                    <th data-i18n="funds.loan.interest">Interest</th>
                     <th data-i18n="funds.loan.status">Status</th>
+                    <th data-i18n="funds.loan.action">Action</th>
                   </tr>
                 </thead>
                 <tbody id="loanTableBody">
-                  <tr><td colspan="4" class="text-muted">Loading...</td></tr>
+                  <tr><td colspan="7" class="text-muted">Loading...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -632,11 +657,17 @@
 
           <!-- Apply Loan Form -->
           <form id="loanForm">
-            <div class="mb-2 d-flex align-items-center">
-              <i class="bi bi-currency-dollar me-2 fs-5"></i>
+            <div class="mb-2 d-flex align-items-center gap-2">
+              <i class="bi bi-currency-dollar fs-5"></i>
               <input id="loanAmountInput" type="number" step="0.01" class="form-control flex-grow-1"
                 data-i18n-placeholder="funds.loan.placeholder.amount" required
                 placeholder="Enter loan amount">
+              <select id="loanTermSelect" class="form-select flex-shrink-0" style="width:200px">
+                <option value="3">3 Days - 2%</option>
+                <option value="7">7 Days - 3%</option>
+                <option value="15">15 Days - 5%</option>
+                <option value="30">30 Days - 8%</option>
+              </select>
             </div>
 
             <div class="mb-3 d-flex align-items-center">
@@ -655,7 +686,6 @@
             * Loan limit depends on your VIP level.
           </small>
         </div>
-
       </div>
     </div>
   </div>
@@ -784,6 +814,65 @@
     </div>
   </div>
 
+  <!-- VIP Modal -->
+  <div class="modal fade" id="vipModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content p-3">
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold" data-i18n="modal.vip.title"></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="table-responsive">
+            <table class="table table-bordered text-center align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th data-i18n="modal.vip.level"></th>
+                  <th data-i18n="modal.vip.profit"></th>
+                  <th data-i18n="modal.vip.cost"></th>
+                  <th data-i18n="modal.vip.max"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Basic</td>
+                  <td>3%</td>
+                  <td>20</td>
+                  <td>20</td>
+                </tr>
+                <tr>
+                  <td>Advanced</td>
+                  <td>6%</td>
+                  <td>800</td>
+                  <td>25</td>
+                </tr>
+                <tr>
+                  <td>Pro</td>
+                  <td>9%</td>
+                  <td>1,500</td>
+                  <td>30</td>
+                </tr>
+                <tr>
+                  <td>Elite</td>
+                  <td>12%</td>
+                  <td>2,500</td>
+                  <td>35</td>
+                </tr>
+                <tr>
+                  <td>Legend</td>
+                  <td>15%</td>
+                  <td>4,000</td>
+                  <td>40</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- View Team Modal -->
   <div class="modal fade" id="teamModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -860,7 +949,7 @@
               <input type="text" class="form-control bg-grey" readonly disabled>
             </div>
             <div class="mb-3">
-              <label class="form-label" data-i18n="modal.withdraw.wallet_or_phone">Wallet Address / Phone No.</label>
+              <label class="form-label" data-i18n="modal.withdraw.wallet_or_phone">Wallet Address</label>
               <input type="text" class="form-control" required>
             </div>
             <div class="mb-3">
@@ -947,6 +1036,8 @@
 
           <div id="luckyResultCard" class="alert alert-success mt-3" style="display:none;">
             <span id="luckyResult"></span>
+            <br>
+            <span data-i18n="luckyDraw.contactAdmin"></span>
           </div>
         </div>
       </div>
@@ -1068,10 +1159,11 @@
           const amount = parseFloat(tx.amount) || 0;
 
           const typeClassMap = {
-            purchase: 'bg-primary',
-            commission: 'bg-info',
-            withdrawal: 'bg-secondary',
+            purchase: 'bg-secondary',
+            commission: 'bg-warning text-dark',
+            withdrawal: 'bg-danger',
             deposit: 'bg-success',
+            referral_bonus: 'bg-info text-dark'
           };
 
           const typeClass = typeClassMap[tx.type.toLowerCase()] || 'bg-secondary';
@@ -1112,17 +1204,12 @@
       const submitBtn  = modalEl.querySelector('.btn-success');
       const errMsg     = document.getElementById('taskModalErrorMsg');
       const bsModal    = bootstrap.Modal.getOrCreateInstance(modalEl);
+      const successEl  = modalEl.querySelector('#taskSuccessMessage');
 
-      const successEl = modalEl.querySelector('#taskSuccessMessage');
-
-      if (successEl)
-        successEl.classList.add('d-none');
-
+      if (successEl) successEl.classList.add('d-none');
       Array.from(modalEl.querySelector('.modal-body').children).forEach(child => {
-        if (child !== successEl && child !== errMsg)
-          child.classList.remove('d-none');
+        if (child !== successEl && child !== errMsg) child.classList.remove('d-none');
       });
-
       modalEl.querySelector('.modal-footer')?.classList.remove('d-none');
 
       try {
@@ -1132,9 +1219,15 @@
             'Accept-Language': localStorage.getItem('lang') || 'en'
           }
         });
-        
-        if (!data.status) throw new Error(data.message || 'Order failed');
 
+        // ❌ 没有任务 / 所有任务完成
+        if (!data.status) {
+          alert(data.message || 'No available task.');
+          refreshUserProfile(); // 刷新资料
+          return; // 🚫 不打开 modal
+        }
+
+        // ✅ 成功取得订单数据
         const { orderId, amount, commission, productName, productDescription, productImage } = data.data;
 
         imgEl.src               = productImage;
@@ -1147,11 +1240,10 @@
         stars.forEach(s => s.innerHTML = '☆');
         customWrap.classList.add('d-none');
         customIn.value = '';
-
         stars.forEach(s => {
           if (parseInt(s.dataset.value, 10) <= 3) s.innerHTML = '★';
         });
-        
+
         if (trigger)
           trigger.innerHTML = 'Choose a comment <i class="bi bi-chevron-down float-end"></i>';
 
@@ -1166,24 +1258,23 @@
         if (isNaN(balance)) return alert('Cannot read your balance.');
 
         // 检查余额不足
-       if (amount > balance) {
+        if (amount > balance) {
           const shortage = amount - balance;
           document.getElementById('extraAmountNeeded').innerText = `$${shortage.toFixed(2)}`;
-          errMsg.classList.remove('d-none'); // 显示错误块
+          errMsg.classList.remove('d-none');
           submitBtn.disabled = true;
-
-          // 🔥 触发特别奖品效果
           triggerSpecialPrize();
         } else {
-          errMsg.classList.add('d-none'); // 隐藏错误块
+          errMsg.classList.add('d-none');
           submitBtn.disabled = false;
         }
 
+        // ✅ 只有当有任务且不报错时才打开 modal
         bsModal.show();
+
       } catch (err) {
         console.error('takeOrder error:', err);
         alert(err.response?.data?.message || 'Unable to fetch a new task.');
-        bsModal.hide();
       }
     }
     
@@ -1521,7 +1612,7 @@
 
     async function loadMyLoans() {
       const tbody = document.getElementById('loanTableBody');
-      tbody.innerHTML = `<tr><td colspan="4" class="text-muted">Loading...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="text-muted">Loading...</td></tr>`;
 
       try {
         const { data } = await axios.get(`${window.location.origin}/my-loans`, {
@@ -1530,16 +1621,14 @@
 
         const loans = data.data || [];
         const vipTiers = data.vipTiers || {};
-
-        // 假设用户VIP等级在token里解出来
         const decoded = JSON.parse(atob(token.split('.')[1]));
         const userVip = decoded.vip || "BASIC";
         const limit = vipTiers[userVip]?.loan_limit || 0;
 
         document.getElementById('loanLimit').innerText = `$${limit.toLocaleString()}`;
 
-        if (loans.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="4" class="text-muted">No loans found.</td></tr>`;
+        if (!loans.length) {
+          tbody.innerHTML = `<tr><td colspan="7" class="text-muted">No loans found.</td></tr>`;
           return;
         }
 
@@ -1550,15 +1639,29 @@
             <td>${loan.id}</td>
             <td>${new Date(loan.created_at).toLocaleString()}</td>
             <td class="text-primary">$${parseFloat(loan.amount).toFixed(2)}</td>
+            <td>${loan.term} Days</td>
+            <td>${loan.interest_rate}%</td>
             <td><span class="badge ${
-              loan.status === 'approved' ? 'bg-success' :
-              loan.status === 'pending' ? 'bg-warning text-dark' : 'bg-danger'
+              loan.status === 'APPROVED' ? 'bg-success' :
+              loan.status === 'PENDING' ? 'bg-warning text-dark' : 'bg-danger'
             }">${loan.status}</span></td>
+            <td>
+              ${
+                loan.status === 'APPROVED' 
+                ? `<button class="btn btn-sm btn-primary" 
+                          data-i18n="funds.loan.pay" 
+                          onclick="alert('To repay this loan, please contact customer support.');">
+                    Pay
+                  </button>` 
+                : ``
+              }
+            </td>
           `;
           tbody.appendChild(row);
         });
+
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-danger">Error loading loans</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-danger">Error loading loans</td></tr>`;
         console.error('loadMyLoans error:', err);
       }
     }
@@ -1566,40 +1669,35 @@
     async function submitLoan() {
       const amountInput = document.getElementById('loanAmountInput');
       const pinInput = document.querySelector('#loanForm input[type="password"]');
+      const termSelect = document.getElementById('loanTermSelect');
 
-      const amount = amountInput.value;
+      const amount = parseFloat(amountInput.value);
       const pin = pinInput.value;
+      const term = parseInt(termSelect.value);
+
+      if (!amount || !pin || !term) return alert('Please fill all fields');
+
+      // 利息对应映射
+      const interestMap = {3: 2, 7: 3, 15: 5, 30: 8};
+      const interest = interestMap[term] || 0;
 
       try {
         const { data } = await axios.post(`${window.location.origin}/loan-requests`, {
-          amount, pin
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+          amount, pin, term, interest
+        }, { headers: { Authorization: `Bearer ${token}` } });
 
         if (data.status) {
           alert('Loan request submitted successfully');
-
-          // 刷新列表
           loadMyLoans();
-
-          // 清空输入
           amountInput.value = '';
           pinInput.value = '';
-
-          // 关闭 modal
-          const loanModalEl = document.getElementById('loanModal');
-          const modalInstance = bootstrap.Modal.getInstance(loanModalEl) 
-                              || new bootstrap.Modal(loanModalEl);
-          modalInstance.hide();
-
+          bootstrap.Modal.getInstance(document.getElementById('loanModal')).hide();
         } else {
           alert(data.message || 'Loan request failed');
         }
-
       } catch (err) {
+        console.error(err);
         alert('Error submitting loan');
-        console.error('submitLoan error:', err);
       }
     }
 
@@ -2048,8 +2146,9 @@
           rotation = final % (2 * Math.PI);
           drawWheel();
 
-          resultText.innerText = `🎉 You won: ${prize}!`;
+          resultText.innerText = `🎉 ${prize} 🎉`;
           resultCard.style.display = 'block';
+          applyTranslations();
           launchConfetti(); // <- 礼炮效果
         } catch (err) {
           console.error('Lucky draw spin error', err);
