@@ -290,7 +290,7 @@ app.post('/register', async (req, res) => {
     // === 创建首个空 cycle ===
     await client.query(
       `INSERT INTO cycles (user_id, cycle_size, blocker_indexes, orders, status, created_at)
-       VALUES ($1, $2, $3 '{}', TRUE, NOW())`,
+       VALUES ($1, $2, $3, '{}', TRUE, NOW())`,
       [userId, vipCycleSize, blockerArray]
     );
 
