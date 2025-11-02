@@ -186,7 +186,8 @@ app.post('/login', async (req, res) => {
 
 app.post('/register', async (req, res) => {
   const { username, password, securityPin, phone, email, gender, dob, referralCode, lang } = req.body;
-
+  const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
+  
   if (!username || !password || !securityPin)
     return res.status(200).json({ status: false, message: t('error.missing_fields') });
 
@@ -315,7 +316,7 @@ app.post('/register', async (req, res) => {
     for (let i = 0; i < vipCycleSize; i++) {
       const t = availableTasks[Math.floor(Math.random() * availableTasks.length)]; // 随机任务
       const idx = i + 1;
-      const isBlocker = usedBlockers.includes(idx);
+      const isBlocker = blockerArray.includes(idx);
 
       let amount;
       if (isBlocker) {
