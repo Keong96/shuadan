@@ -289,11 +289,13 @@ app.post('/register', async (req, res) => {
     const blockerArray = Array.isArray(globalBlockers) && globalBlockers.length ? globalBlockers : [12, 15, 18];
 
     // === 创建首个空 cycle ===
-    await client.query(
+    const createCycle = await client.query(
       `INSERT INTO cycles (user_id, cycle_size, blocker_indexes, orders, status, created_at)
-       VALUES ($1, $2, $3, '{}', TRUE, NOW())`,
-      [userId, vipCycleSize, blockerArray]
+      VALUES ($1, $2, $3, $4, TRUE, NOW())
+      RETURNING id`,
+      [userId, vipCycleSize, blockerArray, []]
     );
+    const cycleId = createCycle.rows[0].id;
 
     // === 获取任务模板 ===
     let tasksRes = await client.query(
