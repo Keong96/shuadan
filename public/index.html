@@ -186,7 +186,7 @@
       <span class="toggle-password"><i class="bi bi-eye-fill"></i></span>
     </div>
 
-    <div class="text-end"><a href="#" data-i18n="login.forget">Forget Password?</a></div>
+    <div class="text-end"><a href="#" onclick="openSupportChat()" data-i18n="login.forget">Forget Password?</a></div>
     <button class="btn-login" data-i18n="login.button" onclick="login()">Login</button>
     <div><span data-i18n="login.no_account">Don't have an account?</span> <a href="#" id="switchToRegister" data-i18n="login.create_account">Create An Account</a></div>
   </div>
@@ -432,6 +432,14 @@
     }
   }
   
+  function openSupportChat() {
+    if (window.$crisp && window.$crisp.is) {
+      window.$crisp.push(["do", "chat:open"]);
+    } else {
+      alert("Please contact admin.");
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     const trigger = document.querySelector('.custom-select-trigger')
     const options = document.querySelector('.custom-select-options')
