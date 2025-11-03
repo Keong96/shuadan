@@ -206,11 +206,6 @@
         </div>
 
         <div class="position-relative">
-          <input name="phone" type="tel" class="form-control" placeholder="Wallet Address" data-i18n-placeholder="register.wallet">
-          <span class="input-icon"><i class="bi bi-wallet2"></i></span>
-        </div>
-
-        <div class="position-relative">
           <input name="email" type="email" class="form-control" placeholder="Email" data-i18n-placeholder="register.email">
           <span class="input-icon"><i class="bi bi-envelope-fill"></i></span>
         </div>
@@ -397,7 +392,6 @@
     const form = document.querySelector('#registerBox')
     const data = {
       username: form.querySelector('[name="username"]').value.trim(),
-      phone: form.querySelector('[name="phone"]').value.trim(),
       email: form.querySelector('[name="email"]').value.trim(),
       gender: form.querySelector('[name="gender"]').value,
       dob: form.querySelector('[name="dob"]').value,
@@ -419,7 +413,6 @@
         username: data.username,
         password: data.password,
         securityPin: data.securityPin,
-        phone: data.phone,
         email: data.email,
         gender: data.gender,
         dob: data.dob,
