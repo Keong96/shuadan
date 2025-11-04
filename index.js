@@ -361,7 +361,7 @@ app.get('/me', verifyToken, async (req, res) => {
 
   try {
     const userRes = await client.query(`
-      SELECT id, username, phone, email, gender, to_char(dob, 'YYYY-MM-DD') AS dob, balance, referral_code, credit_score, vip_level, profile_image, draw_ticket
+      SELECT id, username, phone, email, gender, to_char(dob, 'YYYY-MM-DD') AS dob, balance, referral_code, credit_score, vip_level, profile_image, draw_ticket, walletAddress
       FROM users
       WHERE id = $1 AND deleted_at IS NULL
     `, [userId]);
@@ -428,7 +428,8 @@ app.get('/me', verifyToken, async (req, res) => {
         daily_profit: daily_profit,
         tasks_completed: tasks_completed,
         completion_ratio: completion_ratio,
-        draw_ticket: user.draw_ticket
+        draw_ticket: user.draw_ticket,
+        wallet_address: user.wallet_address
       }
     });
 
@@ -652,7 +653,7 @@ app.post('/orders/:id/review', verifyToken, async (req, res) => {
 
 app.post('/update-profile', verifyToken, async (req, res) => {
   const userId = req.user.userId;
-  const { contact, securityPin } = req.body;
+  const { walletAdress, securityPin } = req.body;
   const lang = req.headers['accept-language'] || 'en';
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
 
@@ -668,8 +669,8 @@ app.post('/update-profile', verifyToken, async (req, res) => {
       return res.status(200).json({ status: false, message: t('error.invalidPin') });
 
     await client.query(`
-      UPDATE users SET phone = $1, updated_at = NOW() WHERE id = $2
-    `, [contact, userId]);
+      UPDATE users SET wallet_address = $1, updated_at = NOW() WHERE id = $2
+    `, [walletAdress, userId]);
 
     res.json({ status: true });
   } catch (err) {

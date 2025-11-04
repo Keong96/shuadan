@@ -1412,21 +1412,21 @@
       const inputs = withdrawInfoModal.querySelectorAll('input');
       if (inputs.length >= 2) {
         inputs[0].value = user.username || '';
-        inputs[1].value = user.phone || '';
+        inputs[1].value = user.wallet_address || '';
         if (inputs[2]) inputs[2].value = '';
       }
     }
     
     function updateProfile() {
       const form = document.getElementById('withdrawInfoForm')
-      const contact = form.querySelector('input:nth-child(5)').value.trim()
+      const walletAddress = form.querySelector('input:nth-child(5)').value.trim()
       const securityPin = form.querySelector('input:nth-child(8)').value.trim()
 
       const token = localStorage.getItem('token')
       if (!securityPin) return alert('Security PIN is required')
 
       axios.post(`${window.location.origin}/update-profile`, {
-        contact,
+        walletAddress,
         securityPin
       }, {
         headers: {
