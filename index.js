@@ -185,7 +185,7 @@ app.post('/login', async (req, res) => {
 })
 
 app.post('/register', async (req, res) => {
-  const { username, password, securityPin, email, gender, dob, referralCode, lang } = req.body;
+  const { username, password, securityPin, phone, email, gender, dob, referralCode, lang } = req.body;
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
   
   if (!username || !password || !securityPin)
@@ -264,10 +264,10 @@ app.post('/register', async (req, res) => {
 
     const insertUser = await client.query(
       `INSERT INTO users 
-        (username, password, security_pin, email, gender, dob, referral_code, referred_by, status, user_type, balance, lucky_draw_setting, created_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,2,10.00,$9,NOW())
+        (username, password, security_pin, phone, email, gender, dob, referral_code, referred_by, status, user_type, balance, lucky_draw_setting, created_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true,2,10.00,$10,NOW())
       RETURNING id`,
-      [username, password, securityPin, email, gender, dob, selfReferralCode, referred_by, defaultLuckyDrawSetting]
+      [username, password, securityPin, phone, email, gender, dob, selfReferralCode, referred_by, defaultLuckyDrawSetting]
     );
 
     const userId = insertUser.rows[0].id;
