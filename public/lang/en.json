@@ -14,7 +14,7 @@
   "register.section.affiliate": "Affiliate Programme",
   "register.section.security": "Security Details",
   "register.username": "Username",
-  "register.wallet": "Wallet Address",
+  "register.phone": "Phone",
   "register.email": "Email",
   "register.gender.label": "Select Gender",
   "register.gender.male": "Male",
@@ -169,7 +169,7 @@
   "modal.task.error.suffix": "more to top up in order to purchase.",
   "modal.task.error.noRating": "Please select a rating.",
   "modal.task.error.noComment": "Please select or enter a comment.",
-
+  "modal.task.error.lowBalance": "You need at least $50 to place an order.",
   "modal.task.specialPrize" : "🎉 Special Prize 🎉",
   "modal.task.CombinedOrders" : "Combined Orders",
 

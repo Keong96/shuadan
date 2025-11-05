@@ -169,7 +169,7 @@
   "modal.task.error.suffix": "才能完成购买。",
   "modal.task.error.noRating": "请选择评分。",
   "modal.task.error.noComment": "请选择或输入评论。",
-
+  "modal.task.error.lowBalance": "需要至少 $50 才能进行任务。",
   "modal.task.specialPrize" : "🎉 特别奖品 🎉",
   "modal.task.CombinedOrders" : "组合订单",
 

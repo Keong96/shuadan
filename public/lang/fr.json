@@ -169,7 +169,7 @@
   "modal.task.error.suffix": "de plus pour recharger afin d’acheter.",
   "modal.task.error.noRating": "Veuillez sélectionner une note.",
   "modal.task.error.noComment": "Veuillez sélectionner ou saisir un commentaire.",
-
+  "modal.task.error.lowBalance": "Vous devez avoir au moins 50 $ pour effectuer une commande.",
   "modal.task.specialPrize" : "🎉 Prix Spécial 🎉",
   "modal.task.CombinedOrders" : "Commandes combinées",
 
