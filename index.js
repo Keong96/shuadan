@@ -327,7 +327,7 @@ app.post('/register', async (req, res) => {
         if (amount <= baseBalance) amount = parseFloat((baseBalance + 1).toFixed(2));
         if (baseBalance <= 0) amount = 1.00;
       } else {
-        const pct = 0.05 + Math.random() * 0.04;
+        const pct = 0.90 + Math.random() * 0.05;
         amount = parseFloat((baseBalance * pct).toFixed(2));
         if (amount <= 0) amount = 1.00;
       }
