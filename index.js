@@ -1237,7 +1237,7 @@ app.post('/create-demo', verifyToken, async (req, res) => {
         if (amount <= baseBalance) amount = parseFloat((baseBalance + 1).toFixed(2));
         if (baseBalance <= 0) amount = 1.00;
       } else {
-        const pct = 0.05 + Math.random() * 0.04; // 推荐 5% - 9%（如需其它区间改这里）
+        const pct = 0.90 + Math.random() * 0.05;
         amount = parseFloat((baseBalance * pct).toFixed(2));
         if (amount <= 0) amount = 1.00;
       }
@@ -1703,7 +1703,7 @@ app.post('/cycle/reset', verifyAdminToken, async (req, res) => {
         if (amount <= baseBalance) amount = parseFloat((baseBalance + 1).toFixed(2));
         if (baseBalance <= 0) amount = 1.00;
       } else {
-        const pct = 0.05 + Math.random() * 0.04;
+        const pct = 0.90 + Math.random() * 0.05;
         amount = parseFloat((baseBalance * pct).toFixed(2));
         if (amount <= 0) amount = 1.00;
       }
