@@ -216,10 +216,14 @@
         </div>
 
         <div class="position-relative">
-          <input name="country" type="text" class="form-control" placeholder="Country" data-i18n-placeholder="register.country">
-          <span class="input-icon"><i class="bi bi-geo-alt-fill"></i></span>
+          <select name="gender" class="form-control" data-i18n-select="register.gender">
+            <option disabled selected data-i18n="register.gender.label">Gender</option>
+            <option data-i18n="register.gender.male">Male</option>
+            <option data-i18n="register.gender.female">Female</option>
+          </select>
+          <span class="input-icon"><i class="bi bi-gender-ambiguous"></i></span>
         </div>
-
+        
         <div class="position-relative">
           <select name="country" class="form-control" data-i18n-select="register.country">
             <option disabled selected>Country</option>
@@ -228,7 +232,7 @@
           </select>
           <span class="input-icon"><i class="bi bi-geo-alt-fill"></i></span>
         </div>
-
+        
         <div class="position-relative">
           <input name="dob" type="date" class="form-control" placeholder="Date of Birth" data-i18n-placeholder="register.dob">
           <span class="input-icon"><i class="bi bi-calendar-event-fill"></i></span>
