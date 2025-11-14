@@ -216,12 +216,17 @@
         </div>
 
         <div class="position-relative">
-          <select name="gender" class="form-control" data-i18n-select="register.gender">
-            <option disabled selected data-i18n="register.gender.label">Gender</option>
-            <option data-i18n="register.gender.male">Male</option>
-            <option data-i18n="register.gender.female">Female</option>
+          <input name="country" type="text" class="form-control" placeholder="Country" data-i18n-placeholder="register.country">
+          <span class="input-icon"><i class="bi bi-geo-alt-fill"></i></span>
+        </div>
+
+        <div class="position-relative">
+          <select name="country" class="form-control" data-i18n-select="register.country">
+            <option disabled selected>Country</option>
+            <option value="NewZealand">New Zealand</option>
+            <option value="Australia">Australia</option>
           </select>
-          <span class="input-icon"><i class="bi bi-gender-ambiguous"></i></span>
+          <span class="input-icon"><i class="bi bi-geo-alt-fill"></i></span>
         </div>
 
         <div class="position-relative">
@@ -399,6 +404,7 @@
       username: form.querySelector('[name="username"]').value.trim(),
       phone: form.querySelector('[name="phone"]').value.trim(),
       email: form.querySelector('[name="email"]').value.trim(),
+      country: form.querySelector('[name="country"]').value,
       gender: form.querySelector('[name="gender"]').value,
       dob: form.querySelector('[name="dob"]').value,
       referralCode: form.querySelector('[name="referral_code"]').value.trim(),
@@ -421,6 +427,7 @@
         securityPin: data.securityPin,
         phone: data.phone,
         email: data.email,
+        country: data.country,
         gender: data.gender,
         dob: data.dob,
         referralCode: data.referralCode,

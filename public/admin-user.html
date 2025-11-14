@@ -270,6 +270,13 @@
             </div>
 
             <div class="mb-3 row">
+              <label for="editUserCountry" class="col-sm-4 col-form-label">国家</label>
+              <div class="col-sm-8">
+                <input id="editUserCountry" name="country" type="text" class="form-control bg-dark text-white border-secondary">
+              </div>
+            </div>
+
+            <div class="mb-3 row">
               <label for="editUserGender" class="col-sm-4 col-form-label">性别</label>
               <div class="col-sm-8">
                 <input id="editUserGender" name="gender" type="text" class="form-control bg-dark text-white border-secondary">
@@ -699,6 +706,7 @@
       document.getElementById('editSecurityPin').value = button.dataset.securityPin || ''
       document.getElementById('editUserPhone').value = button.dataset.phone || ''
       document.getElementById('editUserEmail').value = button.dataset.email || ''
+      document.getElementById('editUserCountry').value = button.dataset.country || ''
       document.getElementById('editUserGender').value = button.dataset.gender || ''
       document.getElementById('editUserDob').value = button.dataset.dob || ''
     })
@@ -946,6 +954,7 @@
         phone: document.getElementById('editUserPhone').value,
         address: document.getElementById('editUserAddress') ? document.getElementById('editUserAddress').value : '',
         email: document.getElementById('editUserEmail').value,
+        country: document.getElementById('editUserEmail').country,
         gender: document.getElementById('editUserGender').value
       };
 

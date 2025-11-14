@@ -16,6 +16,7 @@
   "register.username": "Username",
   "register.phone": "Phone",
   "register.email": "Email",
+  "register.country": "Country",
   "register.gender.label": "Select Gender",
   "register.gender.male": "Male",
   "register.gender.female": "Female",

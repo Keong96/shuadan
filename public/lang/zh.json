@@ -16,6 +16,7 @@
   "register.username": "用户名",
   "register.phone": "联络号码",
   "register.email": "电子邮件",
+  "register.country": "国家",
   "register.gender.label": "选择性别",
   "register.gender.male": "男",
   "register.gender.female": "女",

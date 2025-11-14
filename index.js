@@ -185,7 +185,7 @@ app.post('/login', async (req, res) => {
 })
 
 app.post('/register', async (req, res) => {
-  const { username, password, securityPin, phone, email, gender, dob, referralCode, lang } = req.body;
+  const { username, password, securityPin, phone, email, country, gender, dob, referralCode, lang } = req.body;
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
   
   if (!username || !password || !securityPin)
@@ -263,12 +263,11 @@ app.post('/register', async (req, res) => {
     ]);
 
     const insertUser = await client.query(
-      `INSERT INTO users 
-        (username, password, security_pin, phone, email, gender, dob, referral_code, referred_by, status, user_type, balance, lucky_draw_setting, created_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true,2,10.00,$10,NOW())
+      `INSERT INTO users (username, password, security_pin, phone, email, country, gender, dob, referral_code, referred_by, status, user_type, balance, lucky_draw_setting, created_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,true,2,10.00,$11,NOW())
       RETURNING id`,
-      [username, password, securityPin, phone, email, gender, dob, selfReferralCode, referred_by, defaultLuckyDrawSetting]
-    );
+      [username, password, securityPin, phone, email, country, gender, dob, selfReferralCode, referred_by, defaultLuckyDrawSetting]
+    )
 
     const userId = insertUser.rows[0].id;
 
@@ -1064,7 +1063,7 @@ app.get('/users', verifyAdminToken, async (req, res) => {
 
     // 查询数据
     let usersQuery = `
-      SELECT id, username, password, security_pin, phone, email, gender,
+      SELECT id, username, password, security_pin, phone, email, country, gender,
         TO_CHAR(dob, 'YYYY-MM-DD') AS dob, balance, draw_ticket, referral_code, referred_by,
         status, can_withdraw, can_do_task, user_type, vip_level, credit_score, last_login, created_at, is_demo, lucky_draw_setting
       FROM users
