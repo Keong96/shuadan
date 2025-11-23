@@ -1224,9 +1224,10 @@ app.post('/create-demo', verifyToken, async (req, res) => {
     const orderIds = [];
 
     // 生成 20 个订单
-    for (let i = 0; i < cycleSize; i++) {
-      const t = availableTasks[i % availableTasks.length];
-      const idx = i + 1;
+    const randomIndexes = Array.from({ length: cycleSize }, (_, i) => i + 1).sort(() => Math.random() - 0.5);
+
+    for (const idx of randomIndexes) {
+      const t = availableTasks[Math.floor(Math.random() * availableTasks.length)];
       const isBlocker = Array.isArray(usedBlockers) && usedBlockers.includes(idx);
 
       let amount;
@@ -1245,9 +1246,10 @@ app.post('/create-demo', verifyToken, async (req, res) => {
 
       const or = await client.query(
         `INSERT INTO orders (user_id, cycle_id, task_id, amount, commission, status, created_at)
-        VALUES ($1,$2,$3,$4,$5,'PENDING',NOW()) RETURNING id`,
+         VALUES ($1,$2,$3,$4,$5,'PENDING',NOW()) RETURNING id`,
         [userId, cycleId, t.id, amount, commission]
       );
+
       orderIds.push(or.rows[0].id);
     }
 
