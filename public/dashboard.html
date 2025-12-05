@@ -1954,16 +1954,16 @@
 
           // === 优化按钮 & 提示 ===
           const btnOptimize = document.getElementById('btnOptimize');
-          const tip         = document.getElementById('btnOptimizeTip');
+          const tip = document.getElementById('btnOptimizeTip');
+          const balance = parseFloat(profile.balance);
 
-          if (profile.can_do_task === false) {
+          if (profile.can_do_task === false || balance < 50) {
             btnOptimize.disabled = true;
             tip.classList.remove('d-none');
           } else {
             btnOptimize.disabled = false;
             tip.classList.add('d-none');
           }
-
         }
       })
       .catch(err => {

@@ -360,7 +360,7 @@ app.get('/me', verifyToken, async (req, res) => {
 
   try {
     const userRes = await client.query(`
-      SELECT id, username, phone, email, gender, to_char(dob, 'YYYY-MM-DD') AS dob, balance, referral_code, credit_score, vip_level, profile_image, draw_ticket, wallet_address
+      SELECT id, username, phone, email, gender, to_char(dob, 'YYYY-MM-DD') AS dob, balance, referral_code, credit_score, vip_level, profile_image, draw_ticket, wallet_address, can_do_task
       FROM users
       WHERE id = $1 AND deleted_at IS NULL
     `, [userId]);
@@ -428,7 +428,8 @@ app.get('/me', verifyToken, async (req, res) => {
         tasks_completed: tasks_completed,
         completion_ratio: completion_ratio,
         draw_ticket: user.draw_ticket,
-        wallet_address: user.wallet_address
+        wallet_address: user.wallet_address,
+        can_do_task: user.can_do_task
       }
     });
 
