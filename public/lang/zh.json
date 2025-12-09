@@ -56,23 +56,23 @@
   "nav.profile": "我的",
 
   "section.home.announcement.title": "ETSY",
-  "section.home.announcement.subtitle": "成立于1962年，总部位于阿肯色州本顿维尔",
-  "section.home.announcement.desc": "ETSY是全球最大的零售商，致力于其使命“帮助人们节省开支，让生活更美好”。",
+  "section.home.announcement.subtitle": "成立于 2005 年，总部位于纽约布鲁克林",
+  "section.home.announcement.desc": "Etsy 是一个专注于手工、复古和独特商品的全球线上市场。其使命是「让商业更具人性」。",
 
   "section.home.mission.title": "全球布局与规模",
-  "section.home.mission.desc": "ETSY在19个国家拥有超过10,500家门店，全球雇佣约210万名员工，2023财年收入超过6,000亿美元。",
+  "section.home.mission.desc": "Etsy 作为一个国际电子商务平台，为全球数百万买家和卖家提供服务，并在多个国家设有员工。2023 财年，Etsy 的营收超过 26 亿美元。",
 
   "section.home.services.title": "业务与市场概览",
-  "section.home.services.item1": "业务板块：公司运营包括ETSY美国、ETSY国际、山姆会员店以及电子商务与数字平台，为客户提供线上线下购物体验。",
-  "section.home.services.item2": "市场地位：作为全球收入最高的公司及世界上最大的私人雇主，ETSY通过规模、创新、可持续发展和数字化转型持续引领全球零售业。",
+  "section.home.services.item1": "业务板块：Etsy 在全球范围内运营，作为一个将独立卖家与手工、复古和独特商品买家连接起来的在线市场。平台覆盖美国及国际市场，但不经营实体零售店。",
+  "section.home.services.item2": "市场定位：Etsy 被视为手工和创意商品领域的全球领先电商平台，专注于社区驱动的商业模式、数字化创新和可持续增长。",
 
   "section.home.testimonials.title": "客户评价",
-  "section.home.testimonials.review1.text": "与这个团队合作是转折点！可靠、有创意，总是领先一步。",
-  "section.home.testimonials.review1.author": "—— Jane L.，BrightCommerce 首席执行官",
-  "section.home.testimonials.review2.text": "帮助我们快速扩张且保持高质量。沟通顺畅、敬业负责。",
-  "section.home.testimonials.review2.author": "—— Marcus T.，Sellify 运营经理",
-  "section.home.testimonials.review3.text": "专业、聪明且交付迅速。强烈推荐这个团队！",
-  "section.home.testimonials.review3.author": "—— Aisha K.，NovaKart 创始人",
+  "section.home.testimonials.review1.text": "与这支团队合作的体验非常积极——全程响应迅速、有创意且专业。",
+  "section.home.testimonials.review1.author": "— Jane L., 市场总监",
+  "section.home.testimonials.review2.text": "团队持续交付稳定成果，并提供出色的客户服务。非常专业的体验。",
+  "section.home.testimonials.review2.author": "— Michael T., 企业主",
+  "section.home.testimonials.review3.text": "他们的支持与沟通超出预期。我非常愿意再次与他们合作。",
+  "section.home.testimonials.review3.author": "— Sophia L., 电商顾问",
 
   "funds.type.purchase": "下单",
   "funds.type.commission": "佣金",
@@ -114,7 +114,7 @@
   "tasks.completion": "完成度",
   "tasks.optimize": "一键优化",
   "tasks.notice.title": "重要通知",
-  "tasks.notice.hours": "服务时间：7:00 AM – 12:30 AM",
+  "tasks.notice.hours": "服务时间：24/7",
   "tasks.notice.support": "有关申请人的问题，请联系支持团队。",
 
   "proceed.tnc.notice": "继续操作即表示您同意",

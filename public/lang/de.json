@@ -56,23 +56,23 @@
   "nav.profile": "Profil",
 
   "section.home.announcement.title": "ETSY",
-  "section.home.announcement.subtitle": "Gegründet 1962 mit Hauptsitz in Bentonville, Arkansas",
-  "section.home.announcement.desc": "ETSY ist der weltweit größte Einzelhändler und verfolgt die Mission „Menschen Geld sparen, damit sie besser leben können“.",
+  "section.home.announcement.subtitle": "Gegründet im Jahr 2005 mit Hauptsitz in Brooklyn, New York",
+  "section.home.announcement.desc": "Etsy ist ein globaler Online-Marktplatz für handgefertigte, Vintage- und einzigartige Waren. Die Mission lautet „Handel menschlich halten“.",
 
   "section.home.mission.title": "Globale Präsenz & Größe",
-  "section.home.mission.desc": "ETSY betreibt über 10.500 Filialen in 19 Ländern, beschäftigt weltweit rund 2,1 Millionen Mitarbeiter und erzielte im Geschäftsjahr 2023 einen Umsatz von über 600 Milliarden US-Dollar.",
+  "section.home.mission.desc": "Etsy betreibt eine internationale E-Commerce-Plattform, die Millionen von Käufern und Verkäufern weltweit bedient und Mitarbeiter in mehreren Ländern beschäftigt. Im Geschäftsjahr 2023 erzielte Etsy einen Umsatz von über 2,6 Milliarden US-Dollar.",
 
   "section.home.services.title": "Geschäfts- & Marktübersicht",
-  "section.home.services.item1": "Geschäftssegmente: Die Unternehmensaktivitäten umfassen ETSY U.S., ETSY International, Sam’s Club sowie E-Commerce & Digitale Plattformen und bieten Kunden sowohl vor Ort als auch online Einkaufserlebnisse.",
-  "section.home.services.item2": "Marktposition: Als umsatzstärkstes Unternehmen und größter privater Arbeitgeber der Welt führt ETSY den globalen Einzelhandel weiterhin durch Skalierung, Innovation, Nachhaltigkeit und digitale Transformation an.",
+  "section.home.services.item1": "Geschäftssegmente: Etsy agiert weltweit als Online-Marktplatz, der unabhängige Verkäufer mit Käufern von handgefertigten, Vintage- und einzigartigen Waren verbindet. Die Plattform umfasst Aktivitäten in den Vereinigten Staaten und internationalen Märkten, betreibt jedoch keine physischen Einzelhandelsgeschäfte.",
+  "section.home.services.item2": "Marktposition: Etsy gilt als führender globaler E-Commerce-Marktplatz im Bereich handgefertigter und kreativer Waren und konzentriert sich auf gemeinschaftsorientierten Handel, digitale Innovation und nachhaltiges Wachstum.",
 
   "section.home.testimonials.title": "Kundenbewertungen",
-  "section.home.testimonials.review1.text": "Die Zusammenarbeit mit diesem Team war ein Wendepunkt! Zuverlässig, kreativ und immer einen Schritt voraus.",
-  "section.home.testimonials.review1.author": "—— Jane L., CEO von BrightCommerce",
-  "section.home.testimonials.review2.text": "Sie haben uns geholfen, schnell zu wachsen und dabei die Qualität zu halten. Reibungslose Kommunikation und engagiert.",
-  "section.home.testimonials.review2.author": "—— Marcus T., Betriebsleiter von Sellify",
-  "section.home.testimonials.review3.text": "Professionell, klug und schnell geliefert. Sehr empfehlenswert!",
-  "section.home.testimonials.review3.author": "—— Aisha K., Gründerin von NovaKart",
+  "section.home.testimonials.review1.text": "Die Zusammenarbeit mit diesem Team war durchweg positiv – reaktionsschnell, kreativ und professionell.",
+  "section.home.testimonials.review1.author": "— Jane L., Marketingleiterin",
+  "section.home.testimonials.review2.text": "Das Team lieferte konsequente Ergebnisse und hervorragenden Kundenservice. Eine äußerst professionelle Erfahrung.",
+  "section.home.testimonials.review2.author": "— Michael T., Geschäftsinhaber",
+  "section.home.testimonials.review3.text": "Ihre Unterstützung und Kommunikation übertrafen die Erwartungen. Ich würde jederzeit wieder mit ihnen zusammenarbeiten.",
+  "section.home.testimonials.review3.author": "— Sophia L., E-Commerce-Beraterin",
 
   "funds.type.purchase": "Kauf",
   "funds.type.commission": "Provision",
@@ -114,7 +114,7 @@
   "tasks.allCompleted": "Alle aktuellen Aufgaben sind abgeschlossen. Bitte kontaktieren Sie den Kundendienst, um fortzufahren.",
   "tasks.optimize": "Optimieren",
   "tasks.notice.title": "Wichtige Mitteilung",
-  "tasks.notice.hours": "Servicezeiten: 7:00 AM – 12:30 AM",
+  "tasks.notice.hours": "Servicezeiten: 24/7",
   "tasks.notice.support": "Bei Fragen wenden Sie sich bitte an den Support.",
 
   "proceed.tnc.notice": "Mit dem Fortfahren stimmen Sie den",

@@ -56,23 +56,23 @@
   "nav.profile": "Profile",
 
   "section.home.announcement.title": "ETSY",
-  "section.home.announcement.subtitle": "Established in 1962 and headquartered in Bentonville, Arkansas",
-  "section.home.announcement.desc": "ETSY is the world’s largest retailer dedicated to its mission “to save people money so they can live better.”",
+  "section.home.announcement.subtitle": "Established in 2005 and headquartered in Brooklyn, New York",
+  "section.home.announcement.desc": "Etsy is a global online marketplace focused on handmade, vintage, and unique goods. Its mission is 'Keep commerce human'.",
 
   "section.home.mission.title": "Global Presence & Scale",
-  "section.home.mission.desc": "ETSY operates more than 10,500 stores in 19 countries, employs approximately 2.1 million associates worldwide, and reported over $600 billion in revenue for fiscal year 2023.",
-  
+  "section.home.mission.desc": "Etsy operates as an international e-commerce platform serving millions of buyers and sellers worldwide, with employees in multiple countries. In fiscal year 2023, Etsy reported over USD 2.6 billion in revenue.",
+
   "section.home.services.title": "Business & Market Overview",
-  "section.home.services.item1": "Business Segments: The company’s operations include ETSY U.S., ETSY International, Sam’s Club, and E-commerce & Digital Platforms, offering customers both in-store and online shopping experiences.",
-  "section.home.services.item2": "Market Position: Recognized as the largest company by revenue and the world’s largest private employer, ETSY continues to lead global retail through scale, innovation, sustainability, and digital transformation.",
+  "section.home.services.item1": "Business Segments: Etsy operates globally as an online marketplace connecting independent sellers with buyers of handmade, vintage, and unique goods. The platform includes operations across the United States and international markets but does not operate physical retail stores.",
+  "section.home.services.item2": "Market Position: Etsy is recognized as a leading global e-commerce marketplace within the handmade and creative goods sector, focusing on community-driven commerce, digital innovation, and sustainable growth.",
 
   "section.home.testimonials.title": "Customer Reviews",
-  "section.home.testimonials.review1.text": "Working with this team was a game changer! Reliable, creative, and always one step ahead.",
-  "section.home.testimonials.review1.author": "— Jane L., CEO of BrightCommerce",
-  "section.home.testimonials.review2.text": "They helped us scale fast without compromising quality. Great communication and dedication.",
-  "section.home.testimonials.review2.author": "— Marcus T., Ops Manager at Sellify",
-  "section.home.testimonials.review3.text": "Smart, professional, and quick to deliver. Highly recommend their team to anyone needing results.",
-  "section.home.testimonials.review3.author": "— Aisha K., Founder of NovaKart",
+  "section.home.testimonials.review1.text": "Working with this team was a positive experience - responsive, creative, and professional throughout the process.",
+  "section.home.testimonials.review1.author": "— Jane L., Marketing Director",
+  "section.home.testimonials.review2.text": "The team delivered consistent results and excellent customer service. A highly professional experience.",
+  "section.home.testimonials.review2.author": "— Michael T., Business Owner",
+  "section.home.testimonials.review3.text": "Their support and communication exceeded expectations. I would gladly work with them again.",
+  "section.home.testimonials.review3.author": "— Sophia L., Ecommerce Consultant",
 
   "funds.type.purchase": "Purchase",
   "funds.type.commission": "Commission",
@@ -114,8 +114,8 @@
   "tasks.allCompleted": "All current tasks have been completed. Please contact customer support to continue.",
   "tasks.optimize": "Optimize",
   "tasks.notice.title": "Important Notice",
-  "tasks.notice.hours": "Business hour 7:00 AM – 12:30 AM",
-  "tasks.notice.support": "For inquiries about applicants, please refer to the support team.",
+  "tasks.notice.hours": "Business hour: 24/7",
+  "tasks.notice.support": "For applicant inquiries, please contact our support team.",
   
   "proceed.tnc.notice": "By proceeding, you agree to the",
   "proceed.tnc.link": "Terms & Conditions",
