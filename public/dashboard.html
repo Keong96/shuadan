@@ -1586,18 +1586,6 @@
                 <div data-i18n="records.comm_amount">Comm Amount</div>
                 <div class="fw-bold text-dark">${commAmt} USD</div>
               </div>
-              ${
-                pending
-                ? `<button id="btnOptimize"
-                          class="btn btn-sm btn-success w-100"
-                          data-bs-toggle="modal"
-                          data-bs-target="#taskModal"
-                          data-i18n="records.review"
-                          onclick="takeOrder()">
-                    Review Now
-                  </button>`
-                : ``
-              }
             </div>
           </div>`
       })
