@@ -324,11 +324,14 @@ app.post('/register', async (req, res) => {
         const mult = 1.10 + Math.random() * 0.10;
         amount = parseFloat((baseBalance * mult).toFixed(2));
         if (amount <= baseBalance) amount = parseFloat((baseBalance + 1).toFixed(2));
-        if (baseBalance <= 0) amount = 1.00;
       } else {
         const pct = 0.90 + Math.random() * 0.05;
         amount = parseFloat((baseBalance * pct).toFixed(2));
-        if (amount <= 0) amount = 1.00;
+      }
+
+      if (amount < 50.00) {
+        const randomExtra = Math.random() * 10;
+        amount = parseFloat((50.00 + randomExtra).toFixed(2));
       }
 
       const commission = parseFloat((amount * vipCommissionRate).toFixed(2));
@@ -669,7 +672,7 @@ app.post('/update-profile', verifyToken, async (req, res) => {
       return res.status(200).json({ status: false, message: t('error.invalidPin') });
 
     await client.query(`
-      UPDATE users SET phone = $1, updated_at = NOW() WHERE id = $2
+      UPDATE users SET wallet_address = $1, updated_at = NOW() WHERE id = $2
     `, [walletAddress, userId]);
 
     res.json({ status: true });
@@ -1055,7 +1058,7 @@ app.get('/users', verifyAdminToken, async (req, res) => {
     let countQuery = 'SELECT COUNT(*) FROM users WHERE user_type = 2 AND deleted_at IS NULL';
     const countParams = [];
     if (hasSearch) {
-      countQuery += ' AND username ILIKE $1';
+      countQuery += ' AND (username ILIKE $1 OR phone ILIKE $1)';
       countParams.push(`%${search}%`);
     }
     const countRes = await client.query(countQuery, countParams);
@@ -1072,7 +1075,7 @@ app.get('/users', verifyAdminToken, async (req, res) => {
     `;
     const params = [];
     if (hasSearch) {
-      usersQuery += ' AND username ILIKE $1';
+      usersQuery += ' AND (username ILIKE $1 OR phone ILIKE $1)';
       params.push(`%${search}%`);
     }
     usersQuery += ` ORDER BY id ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
@@ -1473,20 +1476,24 @@ app.put('/orders/:id', verifyAdminToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { amount, commission_rate } = req.body;
+    const newAmount = parseFloat(amount);
+    const rate = parseFloat(commission_rate) / 100;
 
-    const result = await client.query(`
-      UPDATE orders SET amount = $1, commission = $2
-      WHERE id = $3 AND deleted_at IS NULL
-      RETURNING *, cycle_id;
-  `, [amount, (amount * commission_rate / 100), id]);
+    const currentRes = await client.query('SELECT amount, cycle_id FROM orders WHERE id = $1', [id]);
+    if (currentRes.rowCount === 0) return res.json({ status: false, message: 'Order not found' });
 
-    if (result.rowCount === 0) {
-      return res.status(200).json({ status: false, message: 'Order not found' });
+    const oldAmount = parseFloat(currentRes.rows[0].amount);
+    const cycleId = currentRes.rows[0].cycle_id;
+
+    const delta = newAmount - oldAmount;
+
+    const result = await client.query(`UPDATE orders SET amount = $1, commission = $1 * $2 WHERE id = $3 AND deleted_at IS NULL RETURNING *;`, [newAmount, rate, id]);
+
+    if (delta > 0) {
+      await client.query(`UPDATE orders SET amount = amount + $1, commission = (amount + $1) * $2 WHERE cycle_id = $3 AND id > $4 AND deleted_at IS NULL`, [delta, rate, cycleId, id]);
     }
 
-    const order = result.rows[0];
-
-    res.json({ status: true, data: order });
+    res.json({ status: true, data: result.rows[0] });
   } catch (err) {
     console.error('Error updating order:', err);
     res.status(500).json({ status: false, error: 'Update failed' });
