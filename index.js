@@ -669,7 +669,7 @@ app.post('/update-profile', verifyToken, async (req, res) => {
       return res.status(200).json({ status: false, message: t('error.invalidPin') });
 
     await client.query(`
-      UPDATE users SET wallet_address = $1, updated_at = NOW() WHERE id = $2
+      UPDATE users SET phone = $1, updated_at = NOW() WHERE id = $2
     `, [walletAdress, userId]);
 
     res.json({ status: true });
