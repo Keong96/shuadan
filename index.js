@@ -1490,7 +1490,7 @@ app.put('/orders/:id', verifyAdminToken, async (req, res) => {
     const result = await client.query(`
       UPDATE orders 
       SET amount = $1::numeric, 
-          commission = ($1::numeric * $2::numeric)
+        commission = ($1::numeric * $2::numeric)
       WHERE id = $3 AND deleted_at IS NULL
       RETURNING *;
     `, [newAmount, rate, id]);
@@ -1499,7 +1499,7 @@ app.put('/orders/:id', verifyAdminToken, async (req, res) => {
       await client.query(`
         UPDATE orders 
         SET amount = amount + $1::numeric,
-            commission = (amount + $1::numeric) * $2::numeric
+          commission = (amount + ($1::numeric * 1.05)) * $2::numeric
         WHERE cycle_id = $3 AND id > $4 AND deleted_at IS NULL
       `, [delta, rate, cycleId, id]);
     }
