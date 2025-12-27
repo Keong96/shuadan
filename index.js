@@ -653,7 +653,7 @@ app.post('/orders/:id/review', verifyToken, async (req, res) => {
 
 app.post('/update-profile', verifyToken, async (req, res) => {
   const userId = req.user.userId;
-  const { walletAdress, securityPin } = req.body;
+  const { walletAddress, securityPin } = req.body;
   const lang = req.headers['accept-language'] || 'en';
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
 
@@ -670,7 +670,7 @@ app.post('/update-profile', verifyToken, async (req, res) => {
 
     await client.query(`
       UPDATE users SET phone = $1, updated_at = NOW() WHERE id = $2
-    `, [walletAdress, userId]);
+    `, [walletAddress, userId]);
 
     res.json({ status: true });
   } catch (err) {
