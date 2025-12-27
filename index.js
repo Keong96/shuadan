@@ -1476,6 +1476,7 @@ app.put('/orders/:id', verifyAdminToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { amount, commission_rate } = req.body;
+
     const newAmount = parseFloat(amount);
     const rate = parseFloat(commission_rate) / 100;
 
@@ -1484,13 +1485,23 @@ app.put('/orders/:id', verifyAdminToken, async (req, res) => {
 
     const oldAmount = parseFloat(currentRes.rows[0].amount);
     const cycleId = currentRes.rows[0].cycle_id;
-
     const delta = newAmount - oldAmount;
 
-    const result = await client.query(`UPDATE orders SET amount = $1, commission = $1 * $2 WHERE id = $3 AND deleted_at IS NULL RETURNING *;`, [newAmount, rate, id]);
+    const result = await client.query(`
+      UPDATE orders 
+      SET amount = $1::numeric, 
+          commission = ($1::numeric * $2::numeric)
+      WHERE id = $3 AND deleted_at IS NULL
+      RETURNING *;
+    `, [newAmount, rate, id]);
 
     if (delta > 0) {
-      await client.query(`UPDATE orders SET amount = amount + $1, commission = (amount + $1) * $2 WHERE cycle_id = $3 AND id > $4 AND deleted_at IS NULL`, [delta, rate, cycleId, id]);
+      await client.query(`
+        UPDATE orders 
+        SET amount = amount + $1::numeric,
+            commission = (amount + $1::numeric) * $2::numeric
+        WHERE cycle_id = $3 AND id > $4 AND deleted_at IS NULL
+      `, [delta, rate, cycleId, id]);
     }
 
     res.json({ status: true, data: result.rows[0] });
