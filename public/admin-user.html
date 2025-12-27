@@ -1084,6 +1084,7 @@
 
         // 重新计算整个周期总佣金（仅计算已完成的）
         updateCycleCommission(table);
+        location.reload();
       }).catch(err => {
         console.error(err);
         alert('保存失败');
