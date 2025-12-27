@@ -15,17 +15,40 @@
   <link rel="icon" href="img/favicon.ico">
   <script type="text/javascript">
     window.$crisp = [];
-    window.CRISP_WEBSITE_ID = "a8cb42f7-382a-4883-916b-b526650af674";
-    window.$crisp.push(["on", "session:loaded", function() {
+    window.CRISP_WEBSITE_ID = "58810d75-188e-4dda-8aee-dd849fbd402b";
+
+    (function() {
       const style = document.createElement("style");
+      style.id = "my-crisp-custom-style";
       style.innerHTML = `
+        #crisp-chatbox, 
+        .crisp-client .cc-yv368,
+        .crisp-client .cc-1kr6o {
+          bottom: 65px !important;
+          right: 20px !important;
+        }
         #crisp-chatbox-button {
           bottom: 65px !important;
           right: 20px !important;
         }
       `;
       document.head.appendChild(style);
+    })();
+
+    window.$crisp.push(["on", "session:loaded", function() {
+      if (!document.getElementById("my-crisp-custom-style")) {
+        const style = document.createElement("style");
+        style.innerHTML = `
+          #crisp-chatbox, #crisp-chatbox-button {
+            bottom: 65px !important;
+            right: 20px !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      console.log("Crisp Session Loaded - Position Applied");
     }]);
+
     (function() {
       var d = document, s = d.createElement("script");
       s.src = "https://client.crisp.chat/l.js";
