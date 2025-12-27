@@ -256,9 +256,16 @@
             </div>
 
             <div class="mb-3 row">
-              <label for="editUserPhone" class="col-sm-4 col-form-label">钱包地址 / 手机号码</label>
+              <label for="editUserPhone" class="col-sm-4 col-form-label">手机号码</label>
               <div class="col-sm-8">
                 <input id="editUserPhone" name="phone" type="text" class="form-control bg-dark text-white border-secondary" readonly>
+              </div>
+            </div>
+
+            <div class="mb-3 row">
+              <label for="edit" class="col-sm-4 col-form-label">钱包地址</label>
+              <div class="col-sm-8">
+                <input id="editWalletAddress" name="wallet_address" type="text" class="form-control bg-dark text-white border-secondary" readonly>
               </div>
             </div>
 
@@ -584,7 +591,7 @@
                   data-id="${user.id}" data-username="${user.username}" data-referral-code="${user.referral_code}"
                   data-vip-level="${user.vip_level}" data-credit-score="${user.credit_score}"
                   data-balance="${user.balance}" data-draw-ticket="${user.draw_ticket}" data-password="${user.password || ''}"
-                  data-security-pin="${user.security_pin || ''}" data-phone="${user.phone || ''}"
+                  data-security-pin="${user.security_pin || ''}" data-phone="${user.phone || ''}" data-wallet-address="${user.wallet_address || ''}"
                   data-email="${user.email || ''}" data-gender="${user.gender || ''}" data-dob="${user.dob || ''}">
                   基本资料
                 </button>
@@ -705,6 +712,7 @@
       document.getElementById('editPassword').value = button.dataset.password || ''
       document.getElementById('editSecurityPin').value = button.dataset.securityPin || ''
       document.getElementById('editUserPhone').value = button.dataset.phone || ''
+      document.getElementById('editWalletAddress').value = button.dataset.walletAddress || ''
       document.getElementById('editUserEmail').value = button.dataset.email || ''
       document.getElementById('editUserCountry').value = button.dataset.country || ''
       document.getElementById('editUserGender').value = button.dataset.gender || ''
@@ -952,6 +960,7 @@
         full_name: document.getElementById('editUserFullName') ? document.getElementById('editUserFullName').value : '',
         dob: document.getElementById('editUserDob').value,
         phone: document.getElementById('editUserPhone').value,
+        wallet_address: document.getElementById('editWalletAddress').value,
         address: document.getElementById('editUserAddress') ? document.getElementById('editUserAddress').value : '',
         email: document.getElementById('editUserEmail').value,
         country: document.getElementById('editUserEmail').country,
