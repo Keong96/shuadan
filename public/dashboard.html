@@ -1443,8 +1443,10 @@
     
     function updateProfile() {
       const form = document.getElementById('withdrawInfoForm')
-      const walletAddress = form.querySelector('input:nth-child(5)').value.trim()
-      const securityPin = form.querySelector('input:nth-child(8)').value.trim()
+      const inputs = form.querySelectorAll('input');
+
+      const walletAddress = inputs[1].value.trim(); 
+      const securityPin = inputs[2].value.trim();
 
       const token = localStorage.getItem('token')
       if (!securityPin) return alert('Security PIN is required')
