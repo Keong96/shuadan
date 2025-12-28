@@ -1064,12 +1064,13 @@ app.get('/users', verifyAdminToken, async (req, res) => {
 
     // 查询数据
     let usersQuery = `
-      SELECT id, username, password, security_pin, phone, wallet_address, email, country, gender,
-        TO_CHAR(dob, 'YYYY-MM-DD') AS dob, balance, draw_ticket, referral_code, referred_by,
-        status, can_withdraw, can_do_task, user_type, vip_level, credit_score, last_login, created_at, is_demo, lucky_draw_setting,
-        (SELECT username FROM users WHERE id = u.referred_by) AS upline
+      SELECT 
+        u.id, u.username, u.password, u.security_pin, u.phone, u.wallet_address, u.email, u.country, u.gender,
+        TO_CHAR(u.dob, 'YYYY-MM-DD') AS dob, u.balance, u.draw_ticket, u.referral_code, u.referred_by,
+        u.status, u.can_withdraw, u.can_do_task, u.user_type, u.vip_level, u.credit_score, u.last_login, u.created_at, u.is_demo, u.lucky_draw_setting,
+        up.username AS upline
       FROM users u
-      WHERE user_type = 2 AND deleted_at IS NULL
+      LEFT JOIN users up ON u.referred_by = up.id
     `;
     const params = [];
     if (hasSearch) {
