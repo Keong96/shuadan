@@ -578,7 +578,7 @@
             <tr>
               <td>${user.id}</td>
               <td>${user.username} ${isDemo}</td>
-              <td>${user.upline}</td>
+              <td>${user.upline || '-'}</td>
               <td><span class="badge bg-warning text-dark">${user.vip_level}</span></td>
               <td>${user.credit_score}</td>
               <td>${parseFloat(user.balance).toFixed(2)} ${user.balance_gap < 0 ? `<span class="text-danger">(${user.balance_gap})</span>` : ''}</td>
