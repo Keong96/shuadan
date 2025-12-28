@@ -256,15 +256,19 @@
     }
 
     let userMap = {};
-    axios.get('/users', { headers:{Authorization:`Bearer ${token}`} })
+    axios.get('/all-users-list', { headers:{Authorization:`Bearer ${token}`} })
     .then(res => {
+      const userList = document.getElementById('userList');
+      userList.innerHTML = '';
+
       res.data.data.forEach(u => {
         userMap[u.username] = u.id;
         const opt = document.createElement('option');
         opt.value = u.username;
-        document.getElementById('userList').append(opt);
+        userList.append(opt);
       });
-    });
+    })
+    .catch(err => console.error("Load users error:", err));
 
     document.getElementById('visibleUser').addEventListener('input', e => {
       document.getElementById('transUser').value = userMap[e.target.value] || '';
