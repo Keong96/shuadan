@@ -705,9 +705,6 @@ app.post('/withdraw', verifyToken, async (req, res) => {
   if (!amount || isNaN(amount) || amount <= 0)
     return res.status(200).json({ status: false, message: t('error.invalidAmount') });
 
-  if (!/^\d+$/.test(pin))
-    return res.status(200).json({ status: false, message: t('error.invalidPin') });
-
   try {
     // 获取用户资料（包含 balance 和 security_pin）
     const userRes = await client.query(`
