@@ -43,6 +43,14 @@
       flex-direction: column;
     }
 
+    #pagination {
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    #pagination .btn {
+      margin-bottom: 5px;
+    }
+    
     @media (min-width: 992px) {
       .wrapper {
         flex-direction: row;
@@ -659,32 +667,50 @@
       .catch(err => console.error('User load failed:', err));
     }
 
-    function renderPagination(pagination) {
+    function renderPagination({ page, totalPages }) {
       const container = document.getElementById('pagination');
-      if (!container || !pagination) {
-        container.innerHTML = '';
-        return;
+      container.innerHTML = '';
+
+      if (totalPages <= 1) return;
+
+      const buttons = [];
+      const range = 2; // 当前页前后显示的页码数
+
+      // 始终显示第一页
+      buttons.push(1);
+
+      if (page - range > 2) {
+        buttons.push('...');
       }
 
-      let html = '';
-      for (let i = 1; i <= pagination.totalPages; i++) {
-        html += `
-          <button 
-            class="btn btn-sm ${i === pagination.page ? 'btn-primary' : 'btn-outline-primary'} me-1"
-            onclick="loadUsers(${i}, currentSearch)">
-            ${i}
-          </button>
-        `;
+      // 显示当前页附近的页码
+      for (let i = Math.max(2, page - range); i <= Math.min(totalPages - 1, page + range); i++) {
+        buttons.push(i);
       }
 
-      // 如果总页数为0，至少显示1
-      if (pagination.totalPages === 0) {
-        html = `<button class="btn btn-sm btn-primary" onclick="loadUsers(1, currentSearch)">1</button>`;
+      if (page + range < totalPages - 1) {
+        buttons.push('...');
       }
 
-      container.innerHTML = html;
+      // 始终显示最后一页
+      if (totalPages > 1) {
+        buttons.push(totalPages);
+      }
+
+      // 渲染按钮
+      buttons.forEach(item => {
+        if (item === '...') {
+          container.innerHTML += `<span class="btn btn-outline-secondary disabled border-0">...</span>`;
+        } else {
+          container.innerHTML += `
+            <button class="btn ${item === page ? 'btn-primary' : 'btn-outline-primary'} me-1"
+                    onclick="loadTransactions(${item}, currentSearch)">
+              ${item}
+            </button>`;
+        }
+      });
     }
-
+    
     document.getElementById('searchBtn').addEventListener('click', () => {
       const input = document.getElementById('searchInput');
       currentSearch = input.value.trim();
