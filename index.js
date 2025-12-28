@@ -1067,7 +1067,7 @@ app.get('/users', verifyAdminToken, async (req, res) => {
 
     // 查询数据
     let usersQuery = `
-      SELECT id, username, password, security_pin, phone, email, country, gender,
+      SELECT id, username, password, security_pin, phone, wallet_address, email, country, gender,
         TO_CHAR(dob, 'YYYY-MM-DD') AS dob, balance, draw_ticket, referral_code, referred_by,
         status, can_withdraw, can_do_task, user_type, vip_level, credit_score, last_login, created_at, is_demo, lucky_draw_setting
       FROM users
@@ -1138,6 +1138,25 @@ app.get('/users', verifyAdminToken, async (req, res) => {
   } catch (err) {
     console.error('Error fetching admin users:', err);
     res.status(500).json({ status: false, error: 'Failed to fetch users' });
+  }
+});
+
+app.get('/all-users-list', verifyAdminToken, async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT id, username 
+      FROM users 
+      WHERE user_type = 2 AND deleted_at IS NULL 
+      ORDER BY username ASC
+    `);
+
+    res.json({
+      status: true,
+      data: result.rows
+    });
+  } catch (err) {
+    console.error('Error fetching all users list:', err);
+    res.status(500).json({ status: false, error: 'Failed' });
   }
 });
 
