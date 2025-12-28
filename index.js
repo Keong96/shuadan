@@ -705,7 +705,7 @@ app.post('/withdraw', verifyToken, async (req, res) => {
   if (!amount || isNaN(amount) || amount <= 0)
     return res.status(200).json({ status: false, message: t('error.invalidAmount') });
 
-  if (!/^\d{6}$/.test(pin))
+  if (!/^\d+$/.test(pin))
     return res.status(200).json({ status: false, message: t('error.invalidPin') });
 
   try {
