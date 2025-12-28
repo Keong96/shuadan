@@ -1067,7 +1067,7 @@ app.get('/users', verifyAdminToken, async (req, res) => {
       SELECT id, username, password, security_pin, phone, wallet_address, email, country, gender,
         TO_CHAR(dob, 'YYYY-MM-DD') AS dob, balance, draw_ticket, referral_code, referred_by,
         status, can_withdraw, can_do_task, user_type, vip_level, credit_score, last_login, created_at, is_demo, lucky_draw_setting,
-        (SELECT username FROM users WHERE id = users.referred_by) AS upline
+        (SELECT sub.username FROM users sub WHERE sub.id = CAST(users.referred_by AS INTEGER) LIMIT 1) AS upline
       FROM users
       WHERE user_type = 2 AND deleted_at IS NULL
     `;
