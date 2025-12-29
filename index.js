@@ -15,7 +15,7 @@ app.use(express.static('public', { index: false }));
 
 const languages = {
   en: JSON.parse(fs.readFileSync(path.join(__dirname, 'public/lang/en.json'), 'utf8')),
-  // zh: JSON.parse(fs.readFileSync(path.join(__dirname, 'public/lang/zh.json'), 'utf8')),
+  cs: JSON.parse(fs.readFileSync(path.join(__dirname, 'public/lang/cs.json'), 'utf8')),
   de: JSON.parse(fs.readFileSync(path.join(__dirname, 'public/lang/de.json'), 'utf8')),
   fr: JSON.parse(fs.readFileSync(path.join(__dirname, 'public/lang/fr.json'), 'utf8'))
 };
@@ -310,12 +310,15 @@ app.post('/register', async (req, res) => {
       availableTasks = [placeholder.rows[0]];
     }
 
+    let taskPool = [...availableTasks].sort(() => Math.random() - 0.5);
+
     // === 生成 20 个订单 ===
     const baseBalance = parseFloat(ures.rows[0].balance) || 10;
     const orderIds = [];
 
     for (let i = 0; i < vipCycleSize; i++) {
-      const t = availableTasks[Math.floor(Math.random() * availableTasks.length)]; // 随机任务
+      const t = taskPool[i % taskPool.length]; 
+      
       const idx = i + 1;
       const isBlocker = blockerArray.includes(idx);
 
@@ -1071,7 +1074,6 @@ app.get('/users', verifyAdminToken, async (req, res) => {
       FROM users
       WHERE user_type = 2 AND deleted_at IS NULL
     `;
-
     const params = [];
     if (hasSearch) {
       usersQuery += ' AND (username ILIKE $1 OR phone ILIKE $1)';
@@ -1508,7 +1510,7 @@ app.put('/orders/:id', verifyAdminToken, async (req, res) => {
     const result = await client.query(`
       UPDATE orders 
       SET amount = $1::numeric, 
-        commission = ($1::numeric * $2::numeric)
+          commission = ($1::numeric * $2::numeric)
       WHERE id = $3 AND deleted_at IS NULL
       RETURNING *;
     `, [newAmount, rate, id]);
@@ -1517,7 +1519,7 @@ app.put('/orders/:id', verifyAdminToken, async (req, res) => {
       await client.query(`
         UPDATE orders 
         SET amount = amount + $1::numeric,
-          commission = (amount + ($1::numeric * 1.05)) * $2::numeric
+            commission = ($1::numeric * $2::numeric)
         WHERE cycle_id = $3 AND id > $4 AND deleted_at IS NULL
       `, [delta, rate, cycleId, id]);
     }
@@ -1695,25 +1697,13 @@ app.post('/cycle/reset', verifyAdminToken, async (req, res) => {
       [userId]
     );
 
-    // 5️⃣ 创建新 cycle
-    const cycleRes = await client.query(
-      `INSERT INTO cycles (user_id, cycle_size, blocker_indexes, orders, status, created_at)
-       VALUES ($1, $2, $3, '{}', TRUE, NOW())
-       RETURNING id, blocker_indexes`,
-      [userId, cycleSize, blockerArray]
-    );
-
-    const cycleId = cycleRes.rows[0].id;
-    const usedBlockers = Array.isArray(cycleRes.rows[0].blocker_indexes)
-      ? cycleRes.rows[0].blocker_indexes
-      : blockerArray;
-
     // 6️⃣ 获取任务模板
     let tasksRes = await client.query(
       `SELECT id, product_name, product_description, image_url
        FROM tasks WHERE deleted_at IS NULL ORDER BY id ASC LIMIT $1`,
       [cycleSize]
     );
+    
     if (tasksRes.rowCount === 0) {
       const placeholder = await client.query(
         `INSERT INTO tasks (product_name, product_description, image_url, created_at)
@@ -1723,13 +1713,12 @@ app.post('/cycle/reset', verifyAdminToken, async (req, res) => {
       tasksRes = { rows: [placeholder.rows[0]] };
     }
 
-    const availableTasks = tasksRes.rows;
+    const taskPool = [...tasksRes.rows].sort(() => Math.random() - 0.5);
     const orderIds = [];
 
-    // 7️⃣ 生成订单（随机抽选任务）
+    // 7️⃣ 生成订单
     for (let i = 0; i < cycleSize; i++) {
-      // 随机取一个任务
-      const t = availableTasks[Math.floor(Math.random() * availableTasks.length)];
+      const t = taskPool[i % taskPool.length];
 
       const idx = i + 1;
       const isBlocker = usedBlockers.includes(idx);
@@ -1739,11 +1728,11 @@ app.post('/cycle/reset', verifyAdminToken, async (req, res) => {
         const mult = 1.10 + Math.random() * 0.10;
         amount = parseFloat((baseBalance * mult).toFixed(2));
         if (amount <= baseBalance) amount = parseFloat((baseBalance + 1).toFixed(2));
-        if (baseBalance <= 0) amount = 1.00;
+        if (amount < 50.00) amount = parseFloat((50.00 + Math.random() * 10).toFixed(2));
       } else {
         const pct = 0.90 + Math.random() * 0.05;
         amount = parseFloat((baseBalance * pct).toFixed(2));
-        if (amount <= 0) amount = 1.00;
+        if (amount < 50.00) amount = parseFloat((50.00 + Math.random() * 10).toFixed(2));
       }
 
       const commission = parseFloat((amount * commissionRate).toFixed(2));
