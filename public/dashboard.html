@@ -1511,36 +1511,39 @@
     }
     
     function updateProfile() {
-      const form = document.getElementById('withdrawInfoForm')
-      const inputs = form.querySelectorAll('input');
+      const form = document.getElementById('withdrawInfoForm');
+      
+      const chainType = form.querySelector('input[name="chainType"]:checked').value;
+      const allInputs = form.querySelectorAll('input');
+      const walletAddress = allInputs[4].value.trim(); 
+      const securityPin = allInputs[5].value.trim();
 
-      const walletAddress = inputs[1].value.trim(); 
-      const securityPin = inputs[2].value.trim();
-
-      const token = localStorage.getItem('token')
-      if (!securityPin) return alert('Security PIN is required')
+      const token = localStorage.getItem('token');
+      if (!securityPin) return alert('Security PIN is required');
+      if (!walletAddress) return alert('Wallet address is required');
 
       axios.post(`${window.location.origin}/update-profile`, {
         walletAddress,
-        securityPin
+        securityPin,
+        chainType
       }, {
         headers: {
-            Authorization: `Bearer ${token}`,
-            'Accept-Language': localStorage.getItem('lang') || 'en'
-          }
+          Authorization: `Bearer ${token}`,
+          'Accept-Language': localStorage.getItem('lang') || 'en'
+        }
       })
       .then(res => {
         if (res.data.status) {
-          alert('Profile updated')
-          bootstrap.Modal.getInstance(document.getElementById('withdrawInfoModal')).hide()
+          alert('Profile updated');
+          bootstrap.Modal.getInstance(document.getElementById('withdrawInfoModal')).hide();
         } else {
-          alert(res.data.message || 'Update failed')
+          alert(res.data.message || 'Update failed');
         }
       })
       .catch(err => {
-        console.error('/update-profile error:', err)
-        alert('Server error')
-      })
+        console.error('/update-profile error:', err);
+        alert('Server error');
+      });
     }
     
     async function loadTaskRecord() {

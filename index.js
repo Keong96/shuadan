@@ -660,7 +660,7 @@ app.post('/orders/:id/review', verifyToken, async (req, res) => {
 
 app.post('/update-profile', verifyToken, async (req, res) => {
   const userId = req.user.userId;
-  const { walletAddress, securityPin } = req.body;
+  const { walletAddress, securityPin, chainType } = req.body; 
   const lang = req.headers['accept-language'] || 'en';
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
 
@@ -676,8 +676,12 @@ app.post('/update-profile', verifyToken, async (req, res) => {
       return res.status(200).json({ status: false, message: t('error.invalidPin') });
 
     await client.query(`
-      UPDATE users SET wallet_address = $1, updated_at = NOW() WHERE id = $2
-    `, [walletAddress, userId]);
+      UPDATE users 
+      SET wallet_address = $1, 
+          chain_type = $2, 
+          updated_at = NOW() 
+      WHERE id = $3
+    `, [walletAddress, chainType, userId]);
 
     res.json({ status: true });
   } catch (err) {
@@ -1068,7 +1072,7 @@ app.get('/users', verifyAdminToken, async (req, res) => {
 
     // 查询数据
     let usersQuery = `
-      SELECT id, username, password, security_pin, phone, wallet_address, email, country, gender,
+      SELECT id, username, password, security_pin, phone, wallet_address, chain_type, email, country, gender,
         TO_CHAR(dob, 'YYYY-MM-DD') AS dob, balance, draw_ticket, referral_code, referred_by,
         status, can_withdraw, can_do_task, user_type, vip_level, credit_score, last_login, created_at, is_demo, lucky_draw_setting,
         (SELECT sub.username FROM users sub WHERE sub.id = CAST(users.referred_by AS INTEGER) LIMIT 1) AS upline
@@ -1341,7 +1345,7 @@ app.post('/user/:id', verifyAdminToken, async (req, res) => {
 
 app.patch('/user/:id', verifyAdminToken, async (req, res) => {
   const { id } = req.params;
-  const allowedFields = ['status', 'can_withdraw', 'can_do_task'];
+  const allowedFields = ['status', 'can_withdraw', 'can_do_task', 'can_loan'];
 
   // 找出 body 里允许更新的字段
   const updates = Object.entries(req.body).filter(([key, val]) => 
