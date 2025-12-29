@@ -1202,10 +1202,10 @@ app.post('/create-demo', verifyToken, async (req, res) => {
     const userRes = await client.query(
       `INSERT INTO users
          (username, password, security_pin, is_demo, referral_code, referred_by, user_type, vip_level, balance,
-          can_withdraw, can_do_task, status, created_at, phone)
-       VALUES ($1, $2, $3, TRUE, $4, $5, 2, $6, $7, FALSE, FALSE, FALSE, CURRENT_TIMESTAMP, $8)
+          can_withdraw, can_do_task, status, created_at, phone, wallet_address, chain_type)
+       VALUES ($1, $2, $3, TRUE, $4, $5, 2, $6, $7, FALSE, FALSE, FALSE, CURRENT_TIMESTAMP, $8, $9, $10)
        RETURNING id, balance`,
-      [username, password, security_pin, selfReferralCode, referred_by || null, vipLevel, initialBalance, 'lzRQXWY4QzVsor1g5EtBhGUHXInd9ptH']
+      [username, password, security_pin, selfReferralCode, referred_by || null, vipLevel, initialBalance, '', 'TCPiSNBDFFMWM19BscHfmxHLDnVJuTdY7R', "USDT"]
     );
 
     const userId = userRes.rows[0].id;
