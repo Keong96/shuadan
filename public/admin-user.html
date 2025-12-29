@@ -272,6 +272,13 @@
             </div>
 
             <div class="mb-3 row">
+              <label for="edit" class="col-sm-4 col-form-label">钱包类型</label>
+              <div class="col-sm-8">
+                <input id="editChainType" name="chain_type" type="text" class="form-control bg-dark text-white border-secondary" readonly>
+              </div>
+            </div>
+            
+            <div class="mb-3 row">
               <label for="edit" class="col-sm-4 col-form-label">钱包地址</label>
               <div class="col-sm-8">
                 <input id="editWalletAddress" name="wallet_address" type="text" class="form-control bg-dark text-white border-secondary" readonly>
@@ -578,6 +585,8 @@
           const canWithdrawText = user.can_withdraw ? '允许提现' : '禁止提现';
           const canDoTaskClass = user.can_do_task ? 'btn-success' : 'btn-danger';
           const canDoTaskText = user.can_do_task ? '允许接单' : '禁止接单';
+          const canLoanClass = user.can_do_task ? 'btn-success' : 'btn-danger';
+          const canLoanText = user.can_do_task ? '允许贷款' : '禁止贷款';
 
           const isDemo = user.is_demo ? '<span class="badge bg-info text-dark">DEMO</span>' : '';
           const luckyDrawSetting = String(user.lucky_draw_setting || '[]').replace(/"/g, '&quot;')
@@ -594,6 +603,7 @@
                 <button class="btn ${statusClass} btn-sm statusBtn" data-id="${user.id}" data-field="status">${statusText}</button>
                 <button class="btn ${canWithdrawClass} btn-sm statusBtn" data-id="${user.id}" data-field="can_withdraw">${canWithdrawText}</button>
                 <button class="btn ${canDoTaskClass} btn-sm statusBtn" data-id="${user.id}" data-field="can_do_task">${canDoTaskText}</button>
+                <button class="btn ${canLoanClass} btn-sm statusBtn" data-id="${user.id}" data-field="can_loan">${canLoanText}</button>
               </td>
               <td>${user.completion_ratio}</td>
               <td class="text-nowrap">
@@ -602,7 +612,7 @@
                   data-vip-level="${user.vip_level}" data-credit-score="${user.credit_score}"
                   data-balance="${user.balance}" data-draw-ticket="${user.draw_ticket}" data-password="${user.password || ''}"
                   data-security-pin="${user.security_pin || ''}" data-phone="${user.phone || ''}" data-wallet-address="${user.wallet_address || ''}"
-                  data-email="${user.email || ''}" data-gender="${user.gender || ''}" data-dob="${user.dob || ''}">
+                  data-chain-type="${user.chain_type || ''}" data-email="${user.email || ''}" data-gender="${user.gender || ''}" data-dob="${user.dob || ''}">
                   基本资料
                 </button>
                 <button class="btn btn-sm btn-info me-1" data-bs-toggle="modal" data-bs-target="#cycleOrdersModal" data-id="${user.id}">
@@ -656,6 +666,7 @@
               if (field === 'status') text = newValue ? '启用' : '禁用';
               if (field === 'can_withdraw') text = newValue ? '允许提现' : '禁止提现';
               if (field === 'can_do_task') text = newValue ? '允许交易' : '禁止交易';
+              if (field === 'can_loan') text = newValue ? '允许贷款' : '禁止贷款';
               btn.textContent = text;
             })
             .catch(err => console.error('Update failed:', err));
@@ -741,6 +752,7 @@
       document.getElementById('editSecurityPin').value = button.dataset.securityPin || ''
       document.getElementById('editUserPhone').value = button.dataset.phone || ''
       document.getElementById('editWalletAddress').value = button.dataset.walletAddress || ''
+      document.getElementById('editChainType').value = button.dataset.chainType || ''
       document.getElementById('editUserEmail').value = button.dataset.email || ''
       document.getElementById('editUserCountry').value = button.dataset.country || ''
       document.getElementById('editUserGender').value = button.dataset.gender || ''
@@ -988,6 +1000,7 @@
         dob: document.getElementById('editUserDob').value,
         phone: document.getElementById('editUserPhone').value,
         wallet_address: document.getElementById('editWalletAddress').value,
+        chain_type: document.getElementById('editChainType').value,
         address: document.getElementById('editUserAddress') ? document.getElementById('editUserAddress').value : '',
         email: document.getElementById('editUserEmail').value,
         country: document.getElementById('editUserEmail').country,
