@@ -1702,6 +1702,15 @@ app.post('/cycle/reset', verifyAdminToken, async (req, res) => {
       [userId]
     );
 
+    // 5️⃣ 创建新 cycle (这一步你刚才的代码漏掉了)
+    const cycleRes = await client.query(
+      `INSERT INTO cycles (user_id, cycle_size, blocker_indexes, orders, status, created_at)
+       VALUES ($1, $2, $3, '{}', TRUE, NOW())
+       RETURNING id`,
+      [userId, cycleSize, blockerArray]
+    );
+    const cycleId = cycleRes.rows[0].id;
+
     // 6️⃣ 获取任务模板
     let tasksRes = await client.query(
       `SELECT id, product_name, product_description, image_url
@@ -1726,7 +1735,8 @@ app.post('/cycle/reset', verifyAdminToken, async (req, res) => {
       const t = taskPool[i % taskPool.length];
 
       const idx = i + 1;
-      const isBlocker = usedBlockers.includes(idx);
+      // 修正：这里直接使用上面定义的 blockerArray
+      const isBlocker = blockerArray.includes(idx);
 
       let amount;
       if (isBlocker) {
