@@ -1515,10 +1515,10 @@ app.put('/orders/:id', verifyAdminToken, async (req, res) => {
       await client.query(`
         UPDATE orders 
         SET 
-          amount = amount + $1::numeric,
-          commission = (amount + $1::numeric) * $2::numeric 
-        WHERE cycle_id = $3 AND id > $4 AND deleted_at IS NULL
-      `, [delta, rate, cycleId, id]);
+          commission = (amount + $1::numeric) * (commission / NULLIF(amount, 0)),
+          amount = amount + $1::numeric
+        WHERE cycle_id = $2 AND id > $3 AND deleted_at IS NULL
+      `, [delta, cycleId, id]);
     }
 
     res.json({ status: true, data: result.rows[0] });
