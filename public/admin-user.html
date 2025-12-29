@@ -779,7 +779,7 @@
         let html = orders.map((o, index) => {
           const amount = Number(o.amount || 0);
           const commission = Number(o.commission || 0);
-          const ratePct = 3
+          const ratePct = amount > 0 ? Math.round((commission / amount) * 100) : 0;
           const completedText = o.completed_at ? new Date(o.completed_at).toLocaleString() : '未完成';
           const imgHtml = o.image_url
             ? `<img src="${o.image_url}" class="img-thumbnail" style="width:48px;height:48px;object-fit:cover;">`
