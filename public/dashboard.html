@@ -972,6 +972,33 @@
               <label class="form-label" data-i18n="modal.withdraw.full_name">Full Name</label>
               <input type="text" class="form-control bg-grey" readonly disabled>
             </div>
+
+            <div class="mb-3">
+              <label class="form-label" data-i18n="modal.withdraw.network">Network / Chain</label>
+              <div class="d-flex gap-2 justify-content-between">
+                <!-- USDT -->
+                <input type="radio" class="btn-check" name="chainType" id="chainUSDT" value="USDT" checked autocomplete="off">
+                <label class="btn btn-outline-secondary d-flex flex-column align-items-center justify-content-center p-2 w-100 custom-chain-btn" for="chainUSDT">
+                  <img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=040" alt="USDT" width="24" class="mb-1">
+                  <small>USDT</small>
+                </label>
+
+                <!-- ETH -->
+                <input type="radio" class="btn-check" name="chainType" id="chainETH" value="ETH" autocomplete="off">
+                <label class="btn btn-outline-secondary d-flex flex-column align-items-center justify-content-center p-2 w-100 custom-chain-btn" for="chainETH">
+                  <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png?v=040" alt="ETH" width="24" class="mb-1">
+                  <small>ETH</small>
+                </label>
+
+                <!-- BTC -->
+                <input type="radio" class="btn-check" name="chainType" id="chainBTC" value="BTC" autocomplete="off">
+                <label class="btn btn-outline-secondary d-flex flex-column align-items-center justify-content-center p-2 w-100 custom-chain-btn" for="chainBTC">
+                  <img src="https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=040" alt="BTC" width="24" class="mb-1">
+                  <small>BTC</small>
+                </label>
+              </div>
+            </div>
+            
             <div class="mb-3">
               <label class="form-label" data-i18n="modal.withdraw.wallet_or_phone">Wallet Address</label>
               <input type="text" class="form-control" required>
