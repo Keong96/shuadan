@@ -1766,48 +1766,55 @@ app.post('/cycle/reset', verifyAdminToken, async (req, res) => {
 app.get('/transactions', verifyAdminToken, async (req, res) => {
   try {
     const { page = 1, limit = 50, search = '' } = req.query;
-    const offset = (page - 1) * limit;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 50;
+    const offset = (pageNum - 1) * limitNum;
+    const hasSearch = search && search.trim() !== '';
 
-    const whereClause = search
-      ? `WHERE t.deleted_at IS NULL AND u.username ILIKE $3`
-      : `WHERE t.deleted_at IS NULL`;
-
-    const params = search
-      ? [limit, offset, `%${search}%`]
-      : [limit, offset];
-
-    const { rows } = await client.query(
-      `
-      SELECT t.id, u.username, t.amount, t.type, t.status, t.remark, t.created_at
-      FROM transactions t
-      JOIN users u ON t.user_id = u.id
-      ${whereClause}
-      ORDER BY t.created_at DESC
-      LIMIT $1 OFFSET $2
-      `,
-      params
-    );
-
-    const totalRes = await client.query(
-      `
-      SELECT COUNT(*) AS total
-      FROM transactions t
-      JOIN users u ON t.user_id = u.id
-      ${search ? `WHERE t.deleted_at IS NULL AND u.username ILIKE $1` : `WHERE t.deleted_at IS NULL`}
-      `,
-      search ? [`%${search}%`] : []
-    );
-
+    let countQuery = `
+      SELECT COUNT(*) AS total 
+      FROM transactions t 
+      JOIN users u ON t.user_id = u.id 
+      WHERE t.deleted_at IS NULL
+    `;
+    const countParams = [];
+    if (hasSearch) {
+      countQuery += ' AND (u.username ILIKE $1 OR u.phone ILIKE $1)';
+      countParams.push(`%${search}%`);
+    }
+    const totalRes = await client.query(countQuery, countParams);
     const total = parseInt(totalRes.rows[0].total, 10);
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limitNum);
+
+    let dataQuery = `
+      SELECT t.id, u.username, u.phone, t.amount, t.type, t.status, t.remark, t.created_at
+      FROM transactions t
+      JOIN users u ON t.user_id = u.id
+      WHERE t.deleted_at IS NULL
+    `;
+    const dataParams = [];
+    if (hasSearch) {
+      dataQuery += ' AND (u.username ILIKE $1 OR u.phone ILIKE $1)';
+      dataParams.push(`%${search}%`);
+    }
+
+    dataQuery += ` ORDER BY t.created_at DESC LIMIT $${dataParams.length + 1} OFFSET $${dataParams.length + 2}`;
+    dataParams.push(limitNum, offset);
+
+    const { rows } = await client.query(dataQuery, dataParams);
 
     res.json({
       status: true,
       data: rows,
-      pagination: { page: Number(page), totalPages, total }
+      pagination: { 
+        page: pageNum, 
+        totalPages, 
+        total, 
+        limit: limitNum 
+      }
     });
   } catch (err) {
-    console.error('GET /transactions', err);
+    console.error('GET /transactions Error:', err);
     res.status(500).json({ status: false, message: 'Server error' });
   }
 });

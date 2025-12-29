@@ -659,18 +659,19 @@
           <h3 id="withdrawableAmount" class="mb-3 text-primary">$0.00</h3>
 
           <form id="withdrawForm">
-            <input type="number" step="0.01" class="form-control mb-2"
-              data-i18n-placeholder="funds.withdraw.placeholder.amount" required>
+            <!-- 增加了 id 和 oninput -->
+            <input id="withdrawAmountInput" type="number" step="0.01" class="form-control mb-2"
+              data-i18n-placeholder="funds.withdraw.placeholder.amount" oninput="validateWithdrawLimit()" required>
 
             <div class="form-control mb-2 bg-light rounded-4">
               <span class="text-muted small d-block" data-i18n="funds.withdraw.receivingAccount">Receiving Account:</span>
-              <span id="linkedAccount" class="fw-bold">+123456789</span>
+              <span id="linkedAccount" class="fw-bold"></span>
             </div>
 
-            <input type="password" class="form-control mb-3" maxlength="6"
-              data-i18n-placeholder="funds.withdraw.placeholder.pin" required>
+            <input type="password" class="form-control mb-3" data-i18n-placeholder="funds.withdraw.placeholder.pin" required>
 
-            <button type="button" class="btn btn-primary w-100" onclick="submitWithdraw()">
+            <!-- 增加了 id 和 默认 disabled -->
+            <button id="withdrawSubmitBtn" type="button" class="btn btn-primary w-100" onclick="submitWithdraw()" disabled>
               <i class="bi bi-cash-stack me-1"></i>
               <span data-i18n="funds.withdraw.submit">Submit Withdrawal</span>
             </button>
@@ -1691,8 +1692,10 @@
 
     async function submitWithdraw() {
       const form = document.getElementById('withdrawForm');
-      const amount = parseFloat(form.querySelector('input[type="number"]').value);
+      const amount = parseFloat(document.getElementById('withdrawAmountInput').value);
       const pin = form.querySelector('input[type="password"]').value.trim();
+
+      if (!amount || amount <= 0) return;
 
       try {
         const res = await axios.post('/withdraw', { amount, pin }, {
@@ -1988,9 +1991,29 @@
           }
         });
 
-        const balance = parseFloat(res.data?.profile?.balance ?? 0).toFixed(2);
-        document.getElementById('withdrawableAmount').textContent = `$${balance}`;
+        const rawBalance = parseFloat(res.data?.profile?.balance ?? 0);
+        const withdrawable = Math.max(0, rawBalance - 100).toFixed(2);
+        
+        document.getElementById('withdrawableAmount').textContent = `$${withdrawable}`;
+        document.getElementById('linkedAccount').textContent = res.data?.profile?.wallet_address || '-';
+        document.getElementById('withdrawModal').setAttribute('data-raw-balance', rawBalance);
+        
+        document.getElementById('withdrawAmountInput').value = '';
+        validateWithdrawLimit();
       });
+
+      function validateWithdrawLimit() {
+        const amount = parseFloat(document.getElementById('withdrawAmountInput').value) || 0;
+        const rawBalance = parseFloat(document.getElementById('withdrawModal').getAttribute('data-raw-balance') || 0);
+        const submitBtn = document.getElementById('withdrawSubmitBtn');
+
+        // 如果 余额 - 输入金额 < 100 或者 输入金额 <= 0，则禁用按钮
+        if ((rawBalance - amount) < 100 || amount <= 0) {
+          submitBtn.disabled = true;
+        } else {
+          submitBtn.disabled = false;
+        }
+      }
     });
 
     document.getElementById('copyInviteBtn').addEventListener('click', function() {
@@ -2059,7 +2082,7 @@
           const btnOptimize = document.getElementById('btnOptimize');
           const tip = document.getElementById('btnOptimizeTip');
           const balance = parseFloat(profile.balance);
-
+          
           if (profile.can_do_task === false || balance < 50) {
             btnOptimize.disabled = true;
             tip.classList.remove('d-none');
