@@ -585,7 +585,7 @@
           const canWithdrawText = user.can_withdraw ? '允许提现' : '禁止提现';
           const canDoTaskClass = user.can_do_task ? 'btn-success' : 'btn-danger';
           const canDoTaskText = user.can_do_task ? '允许接单' : '禁止接单';
-          const canLoanClass = user.can_do_task ? 'btn-success' : 'btn-danger';
+          const canLoanClass = user.can_loan ? 'btn-success' : 'btn-danger';
           const canLoanText = user.can_loan ? '允许贷款' : '禁止贷款';
 
           const isDemo = user.is_demo ? '<span class="badge bg-info text-dark">DEMO</span>' : '';
