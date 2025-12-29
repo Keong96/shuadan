@@ -354,7 +354,7 @@
             <i class="bi bi-download me-1"></i>
             <span data-i18n="funds.withdraw.title">Withdraw</span>
           </button>
-          <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#loanModal">
+          <button id="loanBtn" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#loanModal">
             <i class="bi bi-cash-stack me-1"></i>
             <span data-i18n="funds.loan.title">Apply Loan</span>
           </button>
@@ -2028,7 +2028,9 @@
           const profile = res.data.profile;
           populateProfile(profile);
 
-          // === 优化按钮 & 提示 ===
+          const loanBtn = document.getElementById('loanBtn');
+          loanBtn.classList.toggle('d-none', !profile.can_loan);
+
           const btnOptimize = document.getElementById('btnOptimize');
           const tip = document.getElementById('btnOptimizeTip');
           const balance = parseFloat(profile.balance);
