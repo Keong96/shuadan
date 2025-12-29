@@ -685,43 +685,30 @@
       if (totalPages <= 1) return;
 
       const buttons = [];
-      const range = 2; // 当前页前后显示的页码数
+      const range = 2; 
 
-      // 始终显示第一页
       buttons.push(1);
+      if (page - range > 2) buttons.push('...');
 
-      if (page - range > 2) {
-        buttons.push('...');
-      }
-
-      // 显示当前页附近的页码
       for (let i = Math.max(2, page - range); i <= Math.min(totalPages - 1, page + range); i++) {
         buttons.push(i);
       }
 
-      if (page + range < totalPages - 1) {
-        buttons.push('...');
-      }
+      if (page + range < totalPages - 1) buttons.push('...');
+      if (totalPages > 1) buttons.push(totalPages);
 
-      // 始终显示最后一页
-      if (totalPages > 1) {
-        buttons.push(totalPages);
-      }
-
-      // 渲染按钮
       buttons.forEach(item => {
         if (item === '...') {
           container.innerHTML += `<span class="btn btn-outline-secondary disabled border-0">...</span>`;
         } else {
           container.innerHTML += `
-            <button class="btn ${item === page ? 'btn-primary' : 'btn-outline-primary'} me-1"
-                    onclick="loadTransactions(${item}, currentSearch)">
+            <button class="btn ${item === page ? 'btn-primary' : 'btn-outline-primary'} me-1" onclick="loadUsers(${item}, currentSearch)">
               ${item}
             </button>`;
         }
       });
     }
-    
+
     document.getElementById('searchBtn').addEventListener('click', () => {
       const input = document.getElementById('searchInput');
       currentSearch = input.value.trim();
