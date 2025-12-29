@@ -702,7 +702,7 @@
           container.innerHTML += `<span class="btn btn-outline-secondary disabled border-0">...</span>`;
         } else {
           container.innerHTML += `
-            <button class="btn ${item === page ? 'btn-primary' : 'btn-outline-primary'} me-1" onclick="loadUsers(${item}, currentSearch)">
+            <button class="btn ${item === page ? 'btn-primary' : 'btn-outline-primary'} me-1" onclick="loadUsers(${item}, '${currentSearch}')">
               ${item}
             </button>`;
         }
