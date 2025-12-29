@@ -791,77 +791,69 @@ app.get('/team', verifyToken, async (req, res) => {
 
 app.get('/my-loans', verifyToken, async (req, res) => {
   try {
-    const loansResult = await client.query(
-      'SELECT id, amount, term, interest_rate, status, remark, created_at FROM loan_requests WHERE user_id = $1 ORDER BY created_at DESC',
-      [req.user.userId]
+    const userId = req.user.userId;
+    const loans = await client.query(
+      'SELECT id, amount, term, interest_rate, status, created_at FROM loan_requests WHERE user_id = $1 ORDER BY created_at DESC',
+      [userId]
     );
 
-    const configResult = await client.query(
-      'SELECT value FROM config WHERE key = $1',
-      ['vip_tiers']
+    const user = await client.query('SELECT loan_limit FROM users WHERE id = $1', [userId]);
+    const totalLimit = parseFloat(user.rows[0]?.loan_limit || 50.00);
+
+    const used = await client.query(
+      "SELECT SUM(amount) as used FROM loan_requests WHERE user_id = $1 AND status IN ('PENDING', 'APPROVED')",
+      [userId]
     );
+    const usedAmount = parseFloat(used.rows[0]?.used || 0);
+    const available = Math.max(0, totalLimit - usedAmount);
 
-    const vipTiers = configResult.rows.length > 0 ? JSON.parse(configResult.rows[0].value) : null;
-
-    return res.json({
-      data: loansResult.rows,
-      vipTiers
+    res.json({
+      status: true,
+      data: loans.rows,
+      loan_limit: totalLimit,
+      available_limit: available
     });
   } catch (err) {
-    console.error('Error fetching my loans:', err);
-    return res.status(500).json({ status: false, error: 'Failed to fetch loans' });
+    console.error(err);
+    res.status(500).json({ status: false, error: 'Server Error' });
   }
 });
 
 app.post('/loan-requests', verifyToken, async (req, res) => {
-  const { amount, pin, term, remark } = req.body;
+  const { amount, pin, term } = req.body;
+  const userId = req.user.userId;
 
-  if (!amount || isNaN(amount) || amount <= 0) {
-    return res.status(200).json({ status: false, message: 'Invalid loan amount' });
-  }
-
-  if (!pin) {
-    return res.status(200).json({ status: false, message: 'PIN is required' });
-  }
+  if (!amount || isNaN(amount) || amount <= 0) return res.json({ status: false, message: 'Invalid amount' });
 
   try {
-    // 从 users 表检查 PIN
-    const userResult = await client.query(
-      'SELECT security_pin FROM users WHERE id = $1',
-      [req.user.userId]
-    );
-
-    if (!userResult.rows.length || userResult.rows[0].security_pin !== pin) {
-      return res.status(200).json({ status: false, message: 'Incorrect PIN' });
+    const user = await client.query('SELECT security_pin, loan_limit FROM users WHERE id = $1', [userId]);
+    if (!user.rows.length || user.rows[0].security_pin !== pin) {
+      return res.json({ status: false, message: 'Incorrect PIN' });
     }
 
-    // 计算利率，可以用一个 map
+    const totalLimit = parseFloat(user.rows[0].loan_limit || 50.00);
+    const used = await client.query(
+      "SELECT SUM(amount) as used FROM loan_requests WHERE user_id = $1 AND status IN ('PENDING', 'APPROVED')",
+      [userId]
+    );
+    const available = totalLimit - parseFloat(used.rows[0].used || 0);
+
+    if (parseFloat(amount) > available) {
+      return res.json({ status: false, message: `Exceeded limit. Available: $${available.toFixed(2)}` });
+    }
+
     const termRates = { 3: 2, 7: 3, 15: 5, 30: 8 };
     const interest_rate = termRates[term] || 2;
 
-    // 插入 loan
-    const insertResult = await client.query(
-      'INSERT INTO loan_requests (user_id, amount, term, interest_rate, remark) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [req.user.userId, amount, term, interest_rate, remark || null]
+    await client.query(
+      'INSERT INTO loan_requests (user_id, amount, term, interest_rate, status) VALUES ($1, $2, $3, $4, $5)',
+      [userId, amount, term, interest_rate, 'PENDING']
     );
 
-    // 取 VIP 配置
-    const configResult = await client.query(
-      'SELECT value FROM config WHERE key = $1',
-      ['vip_tiers']
-    );
-    const vipTiers = configResult.rows.length > 0 ? JSON.parse(configResult.rows[0].value) : null;
-
-    return res.status(200).json({
-      status: true,
-      message: 'Loan request submitted',
-      data: insertResult.rows[0],
-      vipTiers
-    });
-
+    res.json({ status: true, message: 'Success' });
   } catch (err) {
-    console.error('Error creating loan request:', err);
-    return res.status(500).json({ status: false, message: 'Failed to create loan request' });
+    console.error(err);
+    res.status(500).json({ status: false });
   }
 });
 
@@ -1971,15 +1963,16 @@ app.get('/loan-requests', verifyAdminToken, async (req, res) => {
   try {
     const result = await client.query(`
       SELECT 
-        l.id, l.user_id, u.username, l.amount, l.status, l.remark, l.created_at
+        l.id, u.username, l.amount, l.status, l.remark, l.created_at,
+        l.term, l.interest_rate
       FROM loan_requests l
       JOIN users u ON l.user_id = u.id
       ORDER BY l.created_at DESC
     `);
     return res.json({ status: true, data: result.rows });
   } catch (err) {
-    console.error('Error fetching loan requests:', err);
-    return res.status(500).json({ status: false, message: 'Failed to fetch loan requests' });
+    console.error(err);
+    res.status(500).json({ status: false, error: 'Failed to fetch' });
   }
 });
 

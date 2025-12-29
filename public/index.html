@@ -14,17 +14,38 @@
   <link rel="icon" href="img/favicon.ico">
   <script type="text/javascript">
     window.$crisp = [];
-    window.CRISP_WEBSITE_ID = "58810d75-188e-4dda-8aee-dd849fbd402b";
-    window.$crisp.push(["on", "session:loaded", function() {
+    window.CRISP_WEBSITE_ID = "a8cb42f7-382a-4883-916b-b526650af674";
+
+    (function() {
+      const token = localStorage.getItem("token");
+      
+      if (token) {
+        const decoded_token = jwt_decode(token);
+        if (decoded_token.exp > Math.floor(Date.now() / 1000)) {
+          const username = decoded_token.username || decoded_token.name;
+          if (username) {
+            $crisp.push(["set", "user:nickname", [username + " - ETSY"]]);
+          }
+        }
+      }
+
+      $crisp.push(["set", "session:segments", [["ETSY"]]]);
+    })();
+
+    (function() {
       const style = document.createElement("style");
+      style.id = "my-crisp-custom-style";
       style.innerHTML = `
+        #crisp-chatbox, .crisp-client .cc-yv368, .crisp-client .cc-1kr6o {
+          bottom: 65px !important; right: 20px !important;
+        }
         #crisp-chatbox-button {
-          bottom: 65px !important;
-          right: 20px !important;
+          bottom: 65px !important; right: 20px !important;
         }
       `;
       document.head.appendChild(style);
-    }]);
+    })();
+
     (function() {
       var d = document, s = d.createElement("script");
       s.src = "https://client.crisp.chat/l.js";
