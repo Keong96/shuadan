@@ -141,8 +141,7 @@ app.get('/company-name', async (req, res) => {
 
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  const lang = req.headers['accept-language'] || 'en';
-  
+  const lang = (req.headers['accept-language'] || 'en').substring(0, 2).toLowerCase();
   try {
     const result = await client.query('SELECT * FROM users WHERE username = $1 AND password = $2 AND deleted_at IS NULL', [username, password]);
     const user = result.rows[0];
@@ -449,7 +448,7 @@ app.get('/me', verifyToken, async (req, res) => {
 app.get('/my-transactions', verifyToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const lang = req.headers['accept-language'] || 'en';
+    const lang = (req.headers['accept-language'] || 'en').substring(0, 2).toLowerCase();
 
     const { types } = req.query;
 
@@ -526,7 +525,7 @@ app.get('/orders', verifyToken, async (req, res) => {
 
 app.post('/orders', verifyToken, async (req, res) => {
   const userId = req.user.userId;
-  const lang = req.headers['accept-language'] || 'en';
+  const lang = (req.headers['accept-language'] || 'en').substring(0, 2).toLowerCase();
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
 
   try {
@@ -587,7 +586,7 @@ app.post('/orders/:id/review', verifyToken, async (req, res) => {
   const userId = req.user.userId;
   const orderId = req.params.id;
   const { rating, comment } = req.body;
-  const lang = req.headers['accept-language'] || 'en';
+  const lang = (req.headers['accept-language'] || 'en').substring(0, 2).toLowerCase();
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
 
   try {
@@ -661,7 +660,7 @@ app.post('/orders/:id/review', verifyToken, async (req, res) => {
 app.post('/update-profile', verifyToken, async (req, res) => {
   const userId = req.user.userId;
   const { walletAddress, securityPin, chainType } = req.body; 
-  const lang = req.headers['accept-language'] || 'en';
+  const lang = (req.headers['accept-language'] || 'en').substring(0, 2).toLowerCase();
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
 
   if (!securityPin)
@@ -707,7 +706,7 @@ app.post('/update-profile-image', verifyToken, async (req, res) => {
 app.post('/withdraw', verifyToken, async (req, res) => {
   const userId = req.user.userId;
   const { amount, pin } = req.body;
-  const lang = req.headers['accept-language'] || 'en';
+  const lang = (req.headers['accept-language'] || 'en').substring(0, 2).toLowerCase();
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
 
   if (!amount || isNaN(amount) || amount <= 0)
