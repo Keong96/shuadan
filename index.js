@@ -1769,16 +1769,26 @@ app.get('/transactions', verifyAdminToken, async (req, res) => {
 });
 
 app.post('/transactions', verifyAdminToken, async (req, res) => {
-  const { userId, amount, type, status, remark } = req.body;
+  const { userId, amount, type, remark } = req.body;
+  const pureAmount = Math.abs(parseFloat(amount));
+
   try {
+    if (type.toUpperCase() === 'WITHDRAWAL' || type.toUpperCase() === 'PURCHASE') {
+      await client.query(`
+        UPDATE users SET balance = balance - $1 WHERE id = $2
+      `, [pureAmount, userId]);
+    }
+
     const { rows } = await client.query(`
-      INSERT INTO transactions (user_id, amount, type, status, remark)
-      VALUES ($1,$2,$3,$4,$5)
+      INSERT INTO transactions (user_id, amount, type, status, remark, created_at)
+      VALUES ($1, $2, $3, 'PENDING', $4, NOW())
       RETURNING id, amount, type, status, remark, created_at
-    `, [userId, amount, type, status, remark]);
+    `, [userId, pureAmount, type, remark]);
+
     res.json({ status: true, data: rows[0] });
+
   } catch (err) {
-    console.error('POST /transactions', err);
+    console.error('POST /transactions Error:', err);
     res.status(500).json({ status: false, message: 'Server error' });
   }
 });
