@@ -1253,16 +1253,16 @@ app.get('/config', verifyAdminToken, async (req, res) => {
 
 app.post('/user/:id', verifyAdminToken, async (req, res) => {
   const { id } = req.params;
-  const { password, security_pin, phone, email, gender, dob, vip_level, credit_score, draw_ticket} = req.body;
+  const { password, security_pin, phone, email, gender, dob, vip_level, credit_score, loan_limit, draw_ticket} = req.body;
 
   if (!id) return res.status(200).json({ status: false, message: 'Invalid ID' });
 
   try {
     const result = await client.query(
       `UPDATE users 
-       SET password=$1, security_pin=$2, phone=$3, email=$4, gender=$5, dob=$6, vip_level=$7, credit_score=$8, draw_ticket=$9
-       WHERE id=$10`,
-      [password, security_pin, phone, email, gender, dob, vip_level, credit_score, draw_ticket, id]
+       SET password=$1, security_pin=$2, phone=$3, email=$4, gender=$5, dob=$6, vip_level=$7, credit_score=$8, loan_limit=$9, draw_ticket=$10
+       WHERE id=$11`,
+      [password, security_pin, phone, email, gender, dob, vip_level, credit_score, loan_limit, draw_ticket, id]
     );
 
     if (result.rowCount === 0) {
