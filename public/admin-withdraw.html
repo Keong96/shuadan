@@ -227,25 +227,6 @@
     })
     .catch(err => console.error("Load users error:", err));
 
-    document.getElementById('visibleUser').addEventListener('input', e => {
-      const username = e.target.value;
-      const userId = userMap[username];
-      document.getElementById('transUser').value = userId || '';
-      if (userId) {
-        document.getElementById('displayUsername').innerText = username;
-        document.getElementById('userInputWrapper').classList.add('d-none');
-        document.getElementById('userSelectedBadge').classList.remove('d-none');
-        document.getElementById('visibleUser').value = '';
-      }
-    });
-
-    function clearUserSelection() {
-      document.getElementById('transUser').value = '';
-      document.getElementById('visibleUser').value = '';
-      document.getElementById('userInputWrapper').classList.remove('d-none');
-      document.getElementById('userSelectedBadge').classList.add('d-none');
-    }
-
     const confirmDeleteModal = document.getElementById('confirmDeleteModal');
     confirmDeleteModal.addEventListener('show.bs.modal', function(event) {
       const btn = event.relatedTarget;
