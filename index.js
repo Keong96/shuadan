@@ -2203,6 +2203,54 @@ app.get('/wallet/search', verifyAdminToken, async (req, res) => {
   }
 });
 
+app.get('/admin/tnc/:lang', verifyAdminToken, async (req, res) => {
+  try {
+    const { lang } = req.params;
+    const filePath = path.join(__dirname, `public/lang/${lang}.json`);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ status: false, message: "语言文件不存在" });
+    }
+
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    const jsonData = JSON.parse(fileContent);
+    
+    res.json({ status: true, data: jsonData["tnc.content"] || "" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: false, message: "读取失败" });
+  }
+});
+
+app.post('/admin/tnc/:lang', verifyAdminToken, async (req, res) => {
+  try {
+    const { lang } = req.params;
+    const { content } = req.body;
+    const filePath = path.join(__dirname, `public/lang/${lang}.json`);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ status: false, message: "语言文件不存在" });
+    }
+
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    const jsonData = JSON.parse(fileContent);
+
+    jsonData["tnc.content"] = content;
+
+    fs.writeFileSync(filePath, JSON.stringify(jsonData, null, 2), 'utf8');
+
+    if (languages[lang]) {
+      languages[lang] = jsonData;
+    }
+
+    res.json({ status: true, message: "保存成功" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: false, message: "保存失败" });
+  }
+});
+
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
