@@ -1843,8 +1843,7 @@ app.patch('/transactions/:id', verifyAdminToken, async (req, res) => {
   }
 
   try {
-    // 1. 【修复核心】删除了 RETURNING 里的 cycle_id
-    // 之前报错就是因为数据库 transactions 表里根本没这个字段
+    // 1. 更新交易状态并获取该笔交易信息
     const upd = await client.query(`
       UPDATE transactions
       SET status = $1
@@ -1857,69 +1856,62 @@ app.patch('/transactions/:id', verifyAdminToken, async (req, res) => {
     }
 
     const { user_id, amount, type } = upd.rows[0];
+    const txType = type.toUpperCase();
+    const absAmount = Math.abs(parseFloat(amount)); // 取绝对值，防止符号干扰
 
-    // 2. 如果是 APPROVED (通过)
+    // 2. 状态变为 APPROVED (通过)
     if (newStat === 'APPROVED') {
-      const plusTypes = ['DEPOSIT', 'COMMISSION'];
-      // DEPOSIT (充值) 会在这里给用户加钱
-      const delta = plusTypes.includes(type.toUpperCase()) ? amount : -amount;
+      // 只有 DEPOSIT (充值) 和 COMMISSION (佣金) 在通过时需要给用户【加钱】
+      // WITHDRAWAL (提现) 不需要动余额，因为在 /withdraw 申请时已经【扣过钱】了
+      if (txType === 'DEPOSIT' || txType === 'COMMISSION') {
+        await client.query(`
+          UPDATE users SET balance = balance + $1 WHERE id = $2
+        `, [absAmount, user_id]);
+      }
 
-      // 更新余额
-      await client.query(`
-        UPDATE users
-        SET balance = balance + $1
-        WHERE id = $2
-      `, [delta, user_id]);
-
-      // 3. 只有当类型是 COMMISSION 时，才去处理关闭周期(Cycle)的逻辑
-      if (type.toUpperCase() === 'COMMISSION') {
-        
-        // 手动查找当前正在进行的 Cycle (而不是从 transaction 表里拿)
+      // 3. 如果是 COMMISSION 类型，执行 Cycle (周期) 管理逻辑
+      if (txType === 'COMMISSION') {
+        // 查找当前正在进行的 Cycle
         const activeCycleRes = await client.query(`
-            SELECT id FROM cycles WHERE user_id = $1 AND status = TRUE LIMIT 1
+          SELECT id FROM cycles WHERE user_id = $1 AND status = TRUE LIMIT 1
         `, [user_id]);
 
         if (activeCycleRes.rows.length > 0) {
-            const cycle_id = activeCycleRes.rows[0].id;
-            
-            // 关闭旧 cycle
-            await client.query(`
-              UPDATE cycles 
-              SET status = FALSE, finished_at = NOW() 
-              WHERE id = $1
-            `, [cycle_id]);
+          const cycle_id = activeCycleRes.rows[0].id;
 
-            // 处理下线分佣 (逻辑保持不变)
-            const downlineRate = 0.25;
-            const ures = await client.query(`SELECT referred_by FROM users WHERE id = $1`, [user_id]);
-            const referredBy = ures.rows[0] ? ures.rows[0].referred_by : null;
+          // A. 关闭旧 Cycle
+          await client.query(`
+            UPDATE cycles SET status = FALSE, finished_at = NOW() WHERE id = $1
+          `, [cycle_id]);
 
-            if (referredBy) {
-              const userRes = await client.query(
-                `SELECT id, username FROM users WHERE username = $1`,
-                [referredBy]
-              );
-              const referer = userRes.rows[0];
-              
-              if (referer) {
-                const refererShare = parseFloat((amount * downlineRate).toFixed(2));
-                if (refererShare > 0) {
-                  const remark = `Downline: (ID:${user_id}) - #C_${cycle_id}`;
-                  await client.query(`
-                    INSERT INTO transactions (user_id, type, amount, status, remark)
-                    VALUES ($1, 'COMMISSION', $2, 'APPROVED', $3)
-                  `, [referer.id, refererShare, remark]);
-                }
+          // B. 处理下线分佣 (0.25)
+          const ures = await client.query(`SELECT referred_by FROM users WHERE id = $1`, [user_id]);
+          const referredBy = ures.rows[0] ? ures.rows[0].referred_by : null;
+
+          if (referredBy) {
+            const refererRes = await client.query(
+              `SELECT id FROM users WHERE username = $1`,
+              [referredBy]
+            );
+            const referer = refererRes.rows[0];
+            if (referer) {
+              const refererShare = parseFloat((absAmount * 0.25).toFixed(2));
+              if (refererShare > 0) {
+                const remark = `Downline: (ID:${user_id}) - #C_${cycle_id}`;
+                await client.query(`
+                  INSERT INTO transactions (user_id, type, amount, status, remark, created_at)
+                  VALUES ($1, 'COMMISSION', $2, 'APPROVED', $3, NOW())
+                `, [referer.id, refererShare, remark]);
               }
             }
+          }
         }
 
-        // 开启新 Cycle (逻辑保持不变)
+        // C. 开启新 Cycle (自动加载全局配置)
         const configRes = await client.query(`
           SELECT key, value FROM config WHERE key IN ('cycle_size', 'blocker_indexes')
         `);
         const cfgMap = Object.fromEntries(configRes.rows.map(r => [r.key, r.value]));
-
         const newSize = parseInt(cfgMap['cycle_size'], 10) || 20;
         const blockerIndexes = (cfgMap['blocker_indexes'] || '')
           .split(',')
@@ -1933,19 +1925,18 @@ app.patch('/transactions/:id', verifyAdminToken, async (req, res) => {
       }
     }
 
-    // 如果是提现 + 被拒绝 => 把钱退回余额
-    if (type.toUpperCase() === 'WITHDRAWAL' && newStat === 'REJECTED') {
+    // 4. 状态变为 REJECTED (拒绝)
+    // 只有提现被拒绝时，才需要执行退款 (把之前扣掉的钱加回来)
+    if (newStat === 'REJECTED' && txType === 'WITHDRAWAL') {
       await client.query(`
-        UPDATE users
-        SET balance = balance + $1
-        WHERE id = $2
-      `, [Math.abs(amount), user_id]);
+        UPDATE users SET balance = balance + $1 WHERE id = $2
+      `, [absAmount, user_id]);
     }
 
     res.json({ status: true, data: { id: txId, status: newStat } });
 
   } catch (err) {
-    console.error(`PATCH /transactions/${txId}`, err);
+    console.error(`PATCH /transactions/${txId} Error:`, err);
     res.status(500).json({ status: false, message: 'Server error' });
   }
 });
