@@ -1910,36 +1910,46 @@
         options.classList.remove('show');
       });
 
-      document.getElementById('withdrawModal').addEventListener('show.bs.modal', async () => {
-        const res = await axios.get('/me', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Accept-Language': localStorage.getItem('lang') || 'en'
-          }
-        });
-
-        const rawBalance = parseFloat(res.data?.profile?.balance ?? 0);
-        const withdrawable = Math.max(0, rawBalance - 100).toFixed(2);
-        
-        document.getElementById('withdrawableAmount').textContent = `$${withdrawable}`;
-        document.getElementById('linkedAccount').textContent = res.data?.profile?.wallet_address || '-';
-        document.getElementById('withdrawModal').setAttribute('data-raw-balance', rawBalance);
-        
-        document.getElementById('withdrawAmountInput').value = '';
-        validateWithdrawLimit();
-      });
-
       function validateWithdrawLimit() {
         const amount = parseFloat(document.getElementById('withdrawAmountInput').value) || 0;
         const rawBalance = parseFloat(document.getElementById('withdrawModal').getAttribute('data-raw-balance') || 0);
         const submitBtn = document.getElementById('withdrawSubmitBtn');
-        
+
         if ((rawBalance - amount) < 100 || amount <= 0) {
           submitBtn.disabled = true;
         } else {
           submitBtn.disabled = false;
         }
       }
+
+      const amountInput = document.getElementById('withdrawAmountInput');
+      if (amountInput) {
+        amountInput.addEventListener('input', validateWithdrawLimit);
+      }
+
+      document.getElementById('withdrawModal').addEventListener('show.bs.modal', async () => {
+        try {
+          const res = await axios.get('/me', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Accept-Language': localStorage.getItem('lang') || 'en'
+            }
+          });
+
+          const rawBalance = parseFloat(res.data?.profile?.balance ?? 0);
+          const withdrawable = Math.max(0, rawBalance - 100).toFixed(2);
+          
+          document.getElementById('withdrawableAmount').textContent = `$${withdrawable}`;
+          document.getElementById('linkedAccount').textContent = res.data?.profile?.wallet_address || '-';
+          document.getElementById('withdrawModal').setAttribute('data-raw-balance', rawBalance);
+          
+          document.getElementById('withdrawAmountInput').value = '';
+          validateWithdrawLimit(); 
+        } catch (err) {
+          console.error("Failed to refresh balance in modal", err);
+        }
+      });
+
     });
 
     document.getElementById('copyInviteBtn').addEventListener('click', function() {
