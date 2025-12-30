@@ -373,7 +373,7 @@
 
         data.forEach((t, i) => {
           const date = (t.created_at || '').split('T')[0];
-          const amountClass = Number(t.amount) >= 0 ? 'text-success' : 'text-danger';
+          const amountClass = (t.type === 'WITHDRAWAL' || t.type === 'PURCHASE') ? 'text-danger' : 'text-success';
           const typeBadge = {
             DEPOSIT: '<span class="badge bg-success fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">充值</span>',
             WITHDRAWAL: '<span class="badge bg-danger fs-6 py-2 px-3 d-inline-flex align-items-center justify-content-center">提现</span>',
