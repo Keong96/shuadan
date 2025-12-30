@@ -568,10 +568,6 @@
           <div class="row g-2 justify-content-center mb-3" id="checkInCalendar">
             <!-- Days will be injected by JS -->
           </div>
-
-          <!-- Progress info -->
-          <div id="checkInProgress" class="mt-2 small fw-bold"></div>
-          <div id="checkInStatus" class="mt-1 small text-muted"></div>
         </div>
       </div>
 
@@ -1800,10 +1796,8 @@
       }
     }
 
-    async function dailyCheckIn(action) {
+    async function dailyCheckIn() {
       const calendar = document.getElementById("checkInCalendar");
-      const progress = document.getElementById("checkInProgress");
-      const status = document.getElementById("checkInStatus");
 
       const now = new Date();
       now.setHours(0, 0, 0, 0);
@@ -1811,109 +1805,57 @@
       const month = now.getMonth();
       const todayIndex = now.getDate();
 
-      // backend call
-      let checkinData;
-      const res = await axios.get(`${window.location.origin}/checkin`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Accept-Language": localStorage.getItem("lang") || "en"
-        }
-      });
-      checkinData = res.data;
-
-      const { todayCycles = 0, requiredCycles = 2, checkedDays = [], todayChecked = false } = checkinData.data || {};
-      const checkedSet = new Set(checkedDays);
-
-      if (todayChecked) {
-        status.setAttribute("data-i18n", "profile.checkInStatus.allDone");
-      } else if (todayCycles < requiredCycles) {
-        status.setAttribute("data-i18n", "profile.checkInStatus.need2cycle");
-      } else {
-        status.setAttribute("data-i18n", "profile.checkInStatus.success");
-      }
-
-      if (action === "checkin") {
-        await axios.post(`${window.location.origin}/checkin`, {}, {
+      try {
+        // 仅获取数据
+        const res = await axios.get(`${window.location.origin}/checkin`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Accept-Language": localStorage.getItem("lang") || "en"
           }
         });
-        checkedSet.add(todayIndex);
-        status.setAttribute("data-i18n", "profile.checkInStatus.success");
-      }
 
-      // Month + year label
-      const monthTitle = now.toLocaleString("default", { month: "long", year: "numeric" });
-      const weekdayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+        const { checkedDays = [] } = res.data.data || {};
+        const checkedSet = new Set(checkedDays);
 
-      let html = "";
-      html += `<div style="width:100%; max-width:520px; margin:0 auto; box-sizing:border-box;">`;
-      html += `<div class="d-flex justify-content-between align-items-center mb-1">`;
-      html += `<strong style="font-size:0.95rem;">${monthTitle}</strong>`;
-      html += `</div>`;
-      html += `<div class="d-flex border bg-light fw-bold py-1 mb-2" style="font-size:0.75rem;">`;
-      for (const wd of weekdayNames) {
-        html += `<div class="flex-fill text-center py-1">${wd}</div>`;
-      }
-      html += `</div>`;
+        const monthTitle = now.toLocaleString("default", { month: "long", year: "numeric" });
+        const weekdayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-      // grid
-      html += `<div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; font-size:0.78rem;">`;
-
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const firstDay = new Date(year, month, 1).getDay();
-      for (let i = 0; i < firstDay; i++) {
-        html += `<div style="padding:4px;"></div>`;
-      }
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const isToday = d === todayIndex;
-        const isChecked = checkedSet.has(d);
-        const innerCls = isChecked ? "bg-success text-white" : "bg-light";
-        html +=
-          `<div class="text-center border rounded" style="min-height:44px; padding:4px;" data-day="${d}">
-            <div class="${innerCls} rounded h-100 d-flex flex-column justify-content-between" style="padding:6px;">
-              <div class="d-flex justify-content-between align-items-start">
-                <small class="fw-bold" style="font-size:0.85rem;">${d}</small>
-                <span style="font-size:0.85rem;">${isChecked ? "✔" : "&nbsp;"}</span>
-              </div>
-              <div class="small text-muted" data-i18n="${isToday ? "profile.checkInLabel.today" : ""}">
-                ${isToday ? "Today" : "&nbsp;"}
-              </div>
-            </div>
-          </div>`;
-      }
-
-      const totalCells = firstDay + daysInMonth;
-      const pad = (7 - (totalCells % 7)) % 7;
-      for (let i = 0; i < pad; i++) {
-        html += `<div style="padding:4px;"></div>`;
-      }
-
-      html += `</div>`; // grid
-      html += `</div>`; // container
-
-      calendar.innerHTML = html;
-
-      // progress text
-      progress.innerText = `Progress: ${todayCycles}/${requiredCycles}`;
-
-      // click only today cell if valid
-      calendar.querySelectorAll("[data-day]").forEach(el => {
-        const day = Number(el.getAttribute("data-day"));
-        el.onclick = null;
-        if (day === todayIndex && !todayChecked && todayCycles >= requiredCycles) {
-          el.style.cursor = "pointer";
-          el.title = "Click to check in for today";
-          el.addEventListener("click", () => dailyCheckIn("checkin"));
-        } else {
-          el.style.cursor = "default";
-          el.title = "";
+        let html = "";
+        html += `<div style="width:100%; max-width:520px; margin:0 auto;">`;
+        html += `<div class="d-flex justify-content-between align-items-center mb-1"><strong>${monthTitle}</strong></div>`;
+        html += `<div class="d-flex border bg-light fw-bold py-1 mb-2" style="font-size:0.75rem;">`;
+        for (const wd of weekdayNames) {
+          html += `<div class="flex-fill text-center py-1">${wd}</div>`;
         }
-      });
-    }
+        html += `</div>`;
+        html += `<div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; font-size:0.78rem;">`;
 
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstDay = new Date(year, month, 1).getDay();
+        for (let i = 0; i < firstDay; i++) html += `<div></div>`;
+
+        for (let d = 1; d <= daysInMonth; d++) {
+          const isToday = d === todayIndex;
+          const isChecked = checkedSet.has(d);
+          const innerCls = isChecked ? "bg-success text-white" : "bg-light";
+          html +=
+            `<div class="text-center border rounded" style="min-height:44px; padding:4px;">
+              <div class="${innerCls} rounded h-100 d-flex flex-column justify-content-between" style="padding:6px;">
+                <div class="d-flex justify-content-between align-items-start">
+                  <small class="fw-bold">${d}</small>
+                  <span style="font-size:0.85rem;">${isChecked ? "✔" : "&nbsp;"}</span>
+                </div>
+                <div class="small text-muted">${isToday ? "Today" : "&nbsp;"}</div>
+              </div>
+            </div>`;
+        }
+        html += `</div></div>`;
+        calendar.innerHTML = html;
+      } catch (err) {
+        console.error('load checkin history error:', err);
+      }
+    }
+    
     function Logout() {
       localStorage.removeItem("token");
       window.location.href = "index.html";
