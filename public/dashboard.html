@@ -644,58 +644,45 @@
     <button onclick="switchSection('profile')"><i class="bi bi-person-circle"></i><br><span data-i18n="nav.profile">Profile</span></button>
   </nav>
 
-  <!-- Withdraw Modal -->
-  <div class="modal fade" id="withdrawModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content border-0 shadow">
+    <!-- Withdraw Modal -->
+    <div class="modal fade" id="withdrawModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
 
-        <div class="modal-header border-bottom">
-          <h5 class="modal-title fw-semibold" data-i18n="funds.withdraw.title">Withdraw</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
+          <div class="modal-header border-bottom">
+            <h5 class="modal-title fw-semibold" data-i18n="funds.withdraw.title">Withdraw</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
 
-        <div class="modal-body px-4 py-3">
-          <label class="small text-muted" data-i18n="funds.withdraw.label">Withdrawable Amount</label>
-          <h3 id="withdrawableAmount" class="mb-3 text-primary">$0.00</h3>
+          <div class="modal-body px-4 py-3">
+            <label class="small text-muted" data-i18n="funds.withdraw.label">Withdrawable Amount</label>
+            <h3 id="withdrawableAmount" class="mb-3 text-primary">$0.00</h3>
 
-          <form id="withdrawInfoForm">
-            <div class="mb-3">
-              <label class="form-label">Full Name</label>
-              <input type="text" id="withdrawFullName" class="form-control bg-grey" readonly disabled>
-            </div>
+            <form id="withdrawForm">
+              <input id="withdrawAmountInput" type="number" step="0.01" class="form-control mb-2"
+                data-i18n-placeholder="funds.withdraw.placeholder.amount" required>
 
-            <div class="mb-3">
-              <label class="form-label">Network / Chain</label>
-              <div class="d-flex gap-2 justify-content-between">
-                <input type="radio" class="btn-check" name="chainType" id="chainUSDT" value="USDT" checked>
-                <label class="btn btn-outline-secondary w-100" for="chainUSDT">USDT</label>
-
-                <input type="radio" class="btn-check" name="chainType" id="chainETH" value="ETH">
-                <label class="btn btn-outline-secondary w-100" for="chainETH">ETH</label>
-
-                <input type="radio" class="btn-check" name="chainType" id="chainBTC" value="BTC">
-                <label class="btn btn-outline-secondary w-100" for="chainBTC">BTC</label>
+              <div class="form-control mb-2 bg-light rounded-4">
+                <span class="text-muted small d-block" data-i18n="funds.withdraw.receivingAccount">Receiving Account:</span>
+                <span id="linkedAccount" class="fw-bold"></span>
               </div>
-            </div>
 
-            <div class="mb-3">
-              <label class="form-label">Wallet Address</label>
-              <input type="text" id="withdrawWalletAddr" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Security Pin</label>
-              <input type="password" id="withdrawPin" class="form-control" required>
-            </div>
-          </form>
+              <input type="password" class="form-control mb-3" data-i18n-placeholder="funds.withdraw.placeholder.pin" required>
 
-          <small class="text-muted d-block mt-2" data-i18n="funds.withdraw.note">
-            * Withdrawals require task completion and service fee.
-          </small>
+              <button id="withdrawSubmitBtn" type="button" class="btn btn-primary w-100" onclick="submitWithdraw()" disabled>
+                <i class="bi bi-cash-stack me-1"></i>
+                <span data-i18n="funds.withdraw.submit">Submit Withdrawal</span>
+              </button>
+            </form>
+
+            <small class="text-muted d-block mt-2" data-i18n="funds.withdraw.note">
+              * Withdrawals require task completion and service fee.
+            </small>
+          </div>
+
         </div>
-
       </div>
     </div>
-  </div>
 
   <!-- Loan Modal -->
   <div class="modal fade" id="loanModal" tabindex="-1" aria-hidden="true">
