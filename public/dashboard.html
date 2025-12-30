@@ -613,7 +613,6 @@
           <h3 id="withdrawableAmount" class="mb-3 text-primary">$0.00</h3>
 
           <form id="withdrawForm">
-            <!-- 增加了 id 和 oninput -->
             <input id="withdrawAmountInput" type="number" step="0.01" class="form-control mb-2"
               data-i18n-placeholder="funds.withdraw.placeholder.amount" oninput="validateWithdrawLimit()" required>
 
@@ -624,7 +623,6 @@
 
             <input type="password" class="form-control mb-3" data-i18n-placeholder="funds.withdraw.placeholder.pin" required>
 
-            <!-- 增加了 id 和 默认 disabled -->
             <button id="withdrawSubmitBtn" type="button" class="btn btn-primary w-100" onclick="submitWithdraw()" disabled>
               <i class="bi bi-cash-stack me-1"></i>
               <span data-i18n="funds.withdraw.submit">Submit Withdrawal</span>
@@ -972,7 +970,7 @@
           <form id="withdrawInfoForm">
             <div class="mb-3">
               <label class="form-label" data-i18n="modal.withdraw.full_name">Full Name</label>
-              <input type="text" class="form-control bg-grey" readonly disabled>
+              <input type="text" id="withdrawFullName" class="form-control bg-grey" readonly disabled>
             </div>
 
             <div class="mb-3">
@@ -1003,11 +1001,11 @@
 
             <div class="mb-3">
               <label class="form-label" data-i18n="modal.withdraw.wallet_or_phone">Wallet Address</label>
-              <input type="text" id="walletAddrInput" class="form-control" required>
+              <input type="text" id="withdrawWalletAddr" class="form-control" required>
             </div>
             <div class="mb-3">
               <label class="form-label" data-i18n="modal.withdraw.security_password">Security Pin</label>
-              <input type="password" id="securityPinInput" class="form-control" required>
+              <input type="password" id="withdrawPin" class="form-control" required>
             </div>
           </form>
         </div>
@@ -1660,13 +1658,10 @@
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        const loans = data.data || [];
-        const vipTiers = data.vipTiers || {};
-        const decoded = JSON.parse(atob(token.split('.')[1]));
-        const userVip = decoded.vip || "BASIC";
-        const limit = vipTiers[userVip]?.loan_limit || 0;
-
-        document.getElementById('loanLimit').innerText = `$${limit.toLocaleString()}`;
+        const available = parseFloat(data.available_limit || 0).toFixed(2);
+        const total = parseFloat(data.loan_limit || 50).toFixed(2);
+        document.getElementById('loanLimit').innerText = `$${available}`;
+        document.getElementById('totalLimitInfo').innerText = `(Max: $${total})`;
 
         if (!loans.length) {
           tbody.innerHTML = `<tr><td colspan="7" class="text-muted">No loans found.</td></tr>`;
@@ -1721,6 +1716,8 @@
       // 利息对应映射
       const interestMap = {3: 2, 7: 3, 15: 5, 30: 8};
       const interest = interestMap[term] || 0;
+      const limit = parseFloat(document.getElementById('loanLimit').innerText.replace('$', ''));
+      if (amount > limit) return alert('Exceeded available loan limit!');
 
       try {
         const { data } = await axios.post(`${window.location.origin}/loan-requests`, {
