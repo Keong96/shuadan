@@ -1703,11 +1703,12 @@ app.post('/cycle/reset', verifyAdminToken, async (req, res) => {
 
 app.get('/transactions', verifyAdminToken, async (req, res) => {
   try {
-    const { page = 1, limit = 50, search = '' } = req.query;
+    const { page = 1, limit = 50, search = '', type = '' } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 50;
     const offset = (pageNum - 1) * limitNum;
     const hasSearch = search && search.trim() !== '';
+    const hasType = type && type !== 'ALL' && type.trim() !== '';
 
     let countQuery = `
       SELECT COUNT(*) AS total 
@@ -1717,9 +1718,14 @@ app.get('/transactions', verifyAdminToken, async (req, res) => {
     `;
     const countParams = [];
     if (hasSearch) {
-      countQuery += ' AND (u.username ILIKE $1 OR u.phone ILIKE $1)';
+      countQuery += ` AND (u.username ILIKE $${countParams.length + 1} OR u.phone ILIKE $${countParams.length + 1})`;
       countParams.push(`%${search}%`);
     }
+    if (hasType) {
+      countQuery += ` AND t.type = $${countParams.length + 1}`;
+      countParams.push(type);
+    }
+
     const totalRes = await client.query(countQuery, countParams);
     const total = parseInt(totalRes.rows[0].total, 10);
     const totalPages = Math.ceil(total / limitNum);
@@ -1730,10 +1736,15 @@ app.get('/transactions', verifyAdminToken, async (req, res) => {
       JOIN users u ON t.user_id = u.id
       WHERE t.deleted_at IS NULL
     `;
+    
     const dataParams = [];
     if (hasSearch) {
-      dataQuery += ' AND (u.username ILIKE $1 OR u.phone ILIKE $1)';
+      dataQuery += ` AND (u.username ILIKE $${dataParams.length + 1} OR u.phone ILIKE $${dataParams.length + 1})`;
       dataParams.push(`%${search}%`);
+    }
+    if (hasType) {
+      dataQuery += ` AND t.type = $${dataParams.length + 1}`;
+      dataParams.push(type);
     }
 
     dataQuery += ` ORDER BY t.created_at DESC LIMIT $${dataParams.length + 1} OFFSET $${dataParams.length + 2}`;
