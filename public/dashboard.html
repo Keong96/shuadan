@@ -1046,7 +1046,7 @@
           <form id="withdrawInfoForm">
             <div class="mb-3">
               <label class="form-label" data-i18n="modal.withdraw.full_name">Full Name</label>
-              <input type="text" class="form-control bg-grey" readonly disabled>
+              <input type="text" id="withdrawFullName" class="form-control bg-grey" readonly disabled>
             </div>
 
             <div class="mb-3">
@@ -1077,11 +1077,11 @@
 
             <div class="mb-3">
               <label class="form-label" data-i18n="modal.withdraw.wallet_or_phone">Wallet Address</label>
-              <input type="text" id="walletAddrInput" class="form-control" required>
+              <input type="text" id="withdrawWalletAddr" class="form-control" required>
             </div>
             <div class="mb-3">
               <label class="form-label" data-i18n="modal.withdraw.security_password">Security Pin</label>
-              <input type="password" id="securityPinInput" class="form-control" required>
+              <input type="password" id="withdrawPin" class="form-control" required>
             </div>
           </form>
         </div>
@@ -1734,13 +1734,10 @@
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        const loans = data.data || [];
-        const vipTiers = data.vipTiers || {};
-        const decoded = JSON.parse(atob(token.split('.')[1]));
-        const userVip = decoded.vip || "BASIC";
-        const limit = vipTiers[userVip]?.loan_limit || 0;
-
-        document.getElementById('loanLimit').innerText = `$${limit.toLocaleString()}`;
+        const available = parseFloat(data.available_limit || 0).toFixed(2);
+        const total = parseFloat(data.loan_limit || 50).toFixed(2);
+        document.getElementById('loanLimit').innerText = `$${available}`;
+        document.getElementById('totalLimitInfo').innerText = `(Max: $${total})`;
 
         if (!loans.length) {
           tbody.innerHTML = `<tr><td colspan="7" class="text-muted">No loans found.</td></tr>`;
@@ -1987,37 +1984,46 @@
         options.classList.remove('show');
       });
 
-      document.getElementById('withdrawModal').addEventListener('show.bs.modal', async () => {
-        const res = await axios.get('/me', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Accept-Language': localStorage.getItem('lang') || 'en'
-          }
-        });
-
-        const rawBalance = parseFloat(res.data?.profile?.balance ?? 0);
-        const withdrawable = Math.max(0, rawBalance - 100).toFixed(2);
-        
-        document.getElementById('withdrawableAmount').textContent = `$${withdrawable}`;
-        document.getElementById('linkedAccount').textContent = res.data?.profile?.wallet_address || '-';
-        document.getElementById('withdrawModal').setAttribute('data-raw-balance', rawBalance);
-        
-        document.getElementById('withdrawAmountInput').value = '';
-        validateWithdrawLimit();
-      });
-
       function validateWithdrawLimit() {
         const amount = parseFloat(document.getElementById('withdrawAmountInput').value) || 0;
         const rawBalance = parseFloat(document.getElementById('withdrawModal').getAttribute('data-raw-balance') || 0);
         const submitBtn = document.getElementById('withdrawSubmitBtn');
 
-        // 如果 余额 - 输入金额 < 100 或者 输入金额 <= 0，则禁用按钮
         if ((rawBalance - amount) < 100 || amount <= 0) {
           submitBtn.disabled = true;
         } else {
           submitBtn.disabled = false;
         }
       }
+
+      const amountInput = document.getElementById('withdrawAmountInput');
+      if (amountInput) {
+        amountInput.addEventListener('input', validateWithdrawLimit);
+      }
+
+      document.getElementById('withdrawModal').addEventListener('show.bs.modal', async () => {
+        try {
+          const res = await axios.get('/me', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Accept-Language': localStorage.getItem('lang') || 'en'
+            }
+          });
+
+          const rawBalance = parseFloat(res.data?.profile?.balance ?? 0);
+          const withdrawable = Math.max(0, rawBalance - 100).toFixed(2);
+          
+          document.getElementById('withdrawableAmount').textContent = `$${withdrawable}`;
+          document.getElementById('linkedAccount').textContent = res.data?.profile?.wallet_address || '-';
+          
+          document.getElementById('withdrawModal').setAttribute('data-raw-balance', rawBalance);
+          
+          document.getElementById('withdrawAmountInput').value = '';
+          validateWithdrawLimit(); 
+        } catch (err) {
+          console.error("Failed to refresh balance in modal", err);
+        }
+      });
     });
 
     document.getElementById('copyInviteBtn').addEventListener('click', function() {
