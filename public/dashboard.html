@@ -614,7 +614,7 @@
 
           <form id="withdrawForm">
             <input id="withdrawAmountInput" type="number" step="0.01" class="form-control mb-2"
-              data-i18n-placeholder="funds.withdraw.placeholder.amount" oninput="validateWithdrawLimit()" required>
+              data-i18n-placeholder="funds.withdraw.placeholder.amount" required>
 
             <div class="form-control mb-2 bg-light rounded-4">
               <span class="text-muted small d-block" data-i18n="funds.withdraw.receivingAccount">Receiving Account:</span>
@@ -1949,7 +1949,6 @@
           console.error("Failed to refresh balance in modal", err);
         }
       });
-
     });
 
     document.getElementById('copyInviteBtn').addEventListener('click', function() {
