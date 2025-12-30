@@ -30,6 +30,8 @@ services:
     networks:
       - trade_me_net
       - caddy_net
+    volumes:
+      - ./public/lang:/app/public/lang
 
 networks:
   trade_me_net:
