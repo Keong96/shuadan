@@ -579,12 +579,7 @@
             <span data-i18n="profile.luckyDrawTicket">Tickets:</span>
             <span id="luckyDrawTicket" class="fw-bold mx-2" style="font-size:1.2rem;">1</span>
           </div>
-          <button 
-            class="btn btn-primary w-75 py-2" 
-            onclick="initLuckyDraw()" 
-            data-bs-toggle="modal" 
-            data-bs-target="#luckyDrawModal"
-            data-i18n="profile.drawNow">
+          <button id="btnLuckyDraw" class="btn btn-primary w-75 py-2" onclick="initLuckyDraw()" data-bs-toggle="modal" data-bs-target="#luckyDrawModal" data-i18n="profile.drawNow">
             Draw Now
           </button>
         </div>
@@ -1516,6 +1511,7 @@
       // 邀请码和抽奖券
       document.getElementById('inviteCode').innerText = user.referral_code || '-';
       document.getElementById('luckyDrawTicket').innerText = user.draw_ticket || '0';
+      document.getElementById('btnLuckyDraw').classList.toggle('d-none', tickets <= 0);
 
       // Withdraw Info Modal
       const withdrawInfoModal = document.getElementById('withdrawInfoModal');
