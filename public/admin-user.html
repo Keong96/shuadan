@@ -400,6 +400,10 @@
       <div class="modal-content bg-dark text-white border-secondary">
         <div class="modal-header border-bottom border-secondary">
           <h5 class="modal-title">签到记录 <small id="checkinUser" class="text-muted"></small></h5>
+          <!-- 客服点击此按钮签到 -->
+          <button id="adminDoCheckInBtn" class="btn btn-sm btn-primary ms-auto me-2">
+            <i class="bi bi-calendar-check me-1"></i>补签今天
+          </button>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
@@ -901,31 +905,49 @@
       const button = event.relatedTarget;
       const userId = button.getAttribute('data-id');
       const username = button.getAttribute('data-username');
+      this.dataset.userId = userId;
 
-      const listEl = checkInModal.querySelector('#checkinList');
-      const owner = checkInModal.querySelector('#checkinUser');
+      const owner = this.querySelector('#checkinUser');
+      if (owner) owner.textContent = `(${username})`;
+      
+      fetchCheckInList(userId);
+    });
 
-      if (owner) owner.textContent = `（${username}）`;
+    document.getElementById('adminDoCheckInBtn').addEventListener('click', async function() {
+      const userId = checkInModal.dataset.userId;
+      if (!userId) return;
+
+      try {
+        const { data } = await axios.post(`/admin/checkin`, { userId }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (data.status) {
+          alert("签到成功");
+          fetchCheckInList(userId);
+        } else {
+          alert(data.message || "签到失败");
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    async function fetchCheckInList(userId) {
+      const listEl = document.getElementById('checkinList');
       listEl.innerHTML = `<li class="list-group-item bg-dark text-muted">加载中...</li>`;
-
       try {
         const { data } = await axios.get(`${window.location.origin}/checkins/${userId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-
         const list = data?.data || [];
-        if (!list.length) {
-          listEl.innerHTML = `<li class="list-group-item bg-dark text-muted">暂无签到记录</li>`;
-          return;
-        }
-
-        listEl.innerHTML = list.map(r => `
-          <li class="list-group-item bg-dark text-white">${r.checkin_date}</li>
-        `).join('');
+        listEl.innerHTML = list.length 
+          ? list.map(r => `<li class="list-group-item bg-dark text-white">${r.checkin_date}</li>`).join('')
+          : `<li class="list-group-item bg-dark text-muted">暂无记录</li>`;
       } catch (err) {
         listEl.innerHTML = `<li class="list-group-item bg-dark text-danger">加载失败</li>`;
       }
-    });
+    }
 
     const confirmResetModal = document.getElementById('confirmResetModal');
     confirmResetModal.addEventListener('show.bs.modal', function(event) {
