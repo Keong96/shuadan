@@ -1000,14 +1000,14 @@
                 </label>
               </div>
             </div>
-            
+
             <div class="mb-3">
               <label class="form-label" data-i18n="modal.withdraw.wallet_or_phone">Wallet Address</label>
-              <input type="text" class="form-control" required>
+              <input type="text" id="walletAddrInput" class="form-control" required>
             </div>
             <div class="mb-3">
               <label class="form-label" data-i18n="modal.withdraw.security_password">Security Pin</label>
-              <input type="password" class="form-control" required>
+              <input type="password" id="securityPinInput" class="form-control" required>
             </div>
           </form>
         </div>
@@ -1473,10 +1473,8 @@
     function updateProfile() {
       const form = document.getElementById('withdrawInfoForm');
       const chainType = form.querySelector('input[name="chainType"]:checked').value;
-      
-      const allInputs = form.querySelectorAll('input');
-      const walletAddress = allInputs[4].value.trim(); 
-      const securityPin = allInputs[5].value.trim();
+      const walletAddress = document.getElementById('walletAddrInput').value.trim();
+      const securityPin = document.getElementById('securityPinInput').value.trim();
 
       const token = localStorage.getItem('token');
       if (!securityPin) return alert('Security PIN is required');
