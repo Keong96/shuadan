@@ -152,6 +152,16 @@
           <button id="resetBtn" class="btn btn-outline-light">重置</button>
         </div>
 
+        <!-- Filters -->
+        <ul class="nav nav-pills nav-sm mb-3 flex-nowrap overflow-auto" id="filterGroup" style="white-space: nowrap; font-size: 0.8rem;">
+          <li class="nav-item"><a class="nav-link active" href="#" data-value="ALL">全部</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-value="DEPOSIT">充值</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-value="PURCHASE">订单</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-value="WITHDRAWAL">提现</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-value="COMMISSION">佣金</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-value="REFERRAL_BONUS">分成</a></li>
+        </ul>
+
         <div class="card p-3">
           <div class="table-responsive">
             <table class="table table-dark table-striped">
@@ -363,7 +373,11 @@
 
     async function loadTransactions(page = 1, search = '') {
       try {
-        const res = await axios.get(`/transactions?page=${page}&limit=50&search=${encodeURIComponent(search)}`, {
+
+        const activeFilter = document.querySelector('#filterGroup .nav-link.active');
+        const type = (activeFilter && activeFilter.dataset.value !== 'ALL') ? activeFilter.dataset.value : '';
+
+        const res = await axios.get(`/transactions?page=${page}&limit=50&search=${encodeURIComponent(search)}&type=${type}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
@@ -495,6 +509,15 @@
       await axios.patch(`/transactions/${id}`, { status }, { headers:{Authorization:`Bearer ${token}`} });
       loadTransactions();
     }
+
+    document.querySelectorAll('#filterGroup .nav-link').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        document.querySelectorAll('#filterGroup .nav-link').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+        loadTransactions(1, currentSearch);
+      });
+    });
 
     function Logout() {
       localStorage.removeItem('token');
