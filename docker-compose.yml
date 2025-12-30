@@ -32,6 +32,8 @@ services:
     networks:
       - etsy_net
       - caddy_net
+    volumes:
+      - ./public/lang:/app/public/lang
 
 networks:
   etsy_net: # 项目内部私有网络
