@@ -913,56 +913,6 @@ app.get('/checkin', verifyToken, async (req, res) => {
   }
 });
 
-app.post('/checkin', verifyToken, async (req, res) => {
-  const t = key => (req && typeof req.t === 'function' ? req.t(key) : key);
-  const userId = req.user && req.user.userId;
-  if (!userId) return res.status(200).json({ status: false, message: t('error.invalidUser') });
-
-  try {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const todayStr = `${yyyy}-${mm}-${dd}`;
-
-    // check cycles completed today
-    const cycleRes = await client.query(
-      `SELECT COUNT(*)::int AS cnt
-       FROM cycles
-       WHERE user_id = $1
-         AND finished_at::date = $2
-         AND deleted_at IS NULL`,
-      [userId, todayStr]
-    );
-    const todayCycles = parseInt(cycleRes.rows[0].cnt, 10) || 0;
-    const requiredCycles = 2;
-    if (todayCycles < requiredCycles) {
-      return res.status(200).json({ status: false, message: t('profile.checkInStatus.need2cycle') });
-    }
-
-    // already checked in?
-    const chkRes = await client.query(
-      `SELECT 1 FROM checkin WHERE user_id = $1 AND checkin_date = $2 LIMIT 1`,
-      [userId, todayStr]
-    );
-    if (chkRes.rowCount > 0) {
-      return res.status(200).json({ status: false, message: t('profile.checkInStatus.allDone') });
-    }
-
-    // insert check-in
-    await client.query(
-      `INSERT INTO checkin (user_id, checkin_date, created_at)
-       VALUES ($1, $2, NOW())`,
-      [userId, todayStr]
-    );
-
-    return res.status(200).json({ status: true, message: t('profile.checkInStatus.success') });
-  } catch (err) {
-    console.error('POST /checkin error', err);
-    return res.status(500).json({ status: false, message: t('error.internalServer') });
-  }
-});
-
 app.get('/lucky_draw_rates', verifyToken, async (req, res) => {
   try {
     const userRes = await client.query(
@@ -2094,6 +2044,42 @@ app.get('/checkins/:id', verifyAdminToken, async (req, res) => {
   } catch (err) {
     console.error('Error fetching checkins:', err);
     res.status(500).json({ status: false, message: 'Failed to fetch checkins' });
+  }
+});
+
+app.post('/admin/checkin', verifyAdminToken, async (req, res) => {
+  const { userId } = req.body;
+  
+  if (!userId) {
+    return res.status(200).json({ status: false, message: 'User ID is required' });
+  }
+
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const checkRes = await client.query(
+      `SELECT 1 FROM checkin WHERE user_id = $1 AND checkin_date = $2 LIMIT 1`,
+      [userId, todayStr]
+    );
+
+    if (checkRes.rowCount > 0) {
+      return res.status(200).json({ status: false, message: 'User already checked in today' });
+    }
+
+    await client.query(
+      `INSERT INTO checkin (user_id, checkin_date, created_at)
+       VALUES ($1, $2, NOW())`,
+      [userId, todayStr]
+    );
+
+    res.json({ 
+      status: true, 
+      message: 'Manual check-in successful' 
+    });
+
+  } catch (err) {
+    console.error('Admin Check-in Error:', err);
+    res.status(500).json({ status: false, message: 'Server error' });
   }
 });
 
