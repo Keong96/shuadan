@@ -1462,21 +1462,20 @@
 
       // Withdraw Info Modal
       const withdrawInfoModal = document.getElementById('withdrawInfoModal');
-      const inputs = withdrawInfoModal.querySelectorAll('input');
-      if (inputs.length >= 2) {
-        inputs[0].value = user.username || '';
-        inputs[1].value = user.wallet_address || '';
-        if (inputs[2]) inputs[2].value = '';
+      document.getElementById('withdrawFullName').value = user.username || '';
+      document.getElementById('withdrawWalletAddr').value = user.wallet_address || '';
+      if (user.chain_type) {
+        const radio = document.querySelector(`input[name="chainType"][value="${user.chain_type}"]`);
+        if (radio) radio.checked = true;
       }
     }
     
     function updateProfile() {
-      const form = document.getElementById('withdrawInfoForm');
-      const chainType = form.querySelector('input[name="chainType"]:checked').value;
-      const walletAddress = document.getElementById('walletAddrInput').value.trim();
-      const securityPin = document.getElementById('securityPinInput').value.trim();
-
       const token = localStorage.getItem('token');
+      const chainType = document.querySelector('input[name="chainType"]:checked').value;
+      const walletAddress = document.getElementById('withdrawWalletAddr').value.trim();
+      const securityPin = document.getElementById('withdrawPin').value.trim();
+
       if (!securityPin) return alert('Security PIN is required');
       if (!walletAddress) return alert('Wallet address is required');
 
@@ -1497,10 +1496,6 @@
         } else {
           alert(res.data.message || 'Update failed');
         }
-      })
-      .catch(err => {
-        console.error('/update-profile error:', err);
-        alert('Server error');
       });
     }
     
