@@ -29,17 +29,42 @@
     .main-content { flex-grow: 1; padding: 20px; background-color: #1e1e2f; }
     .card { background-color: #2a2d45; border: none; color: #fff; }
 
-    #editor-container {
-      height: 600px;
-      background-color: #fff;
-      color: #333;
-      border-bottom-left-radius: 1rem;
-      border-bottom-right-radius: 1rem;
+    /* 让编辑器容器的背景和边框像个 Modal */
+    .ql-container.ql-snow {
+      border: 1px solid #444 !important;
     }
-    .ql-toolbar {
-      background-color: #eee;
-      border-top-left-radius: 1rem;
-      border-top-right-radius: 1rem;
+
+    /* 核心：强制编辑器内部模拟 Bootstrap Modal 的排版 */
+    .ql-editor {
+      background-color: #fff !important; /* Modal 背景通常是白色 */
+      color: #212529 !important;      /* Bootstrap 默认深灰色 */
+      font-family: var(--bs-body-font-family); /* 使用 Bootstrap 标准字体 */
+      padding: 1rem !important;        /* 对应 modal-body 的 padding */
+      min-height: 500px;
+    }
+
+    /* 模拟 Modal 内部的 h6 (你的 T&C 主要用的就是这个) */
+    .ql-editor h6 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      line-height: 1.2;
+      font-size: 1rem; /* Bootstrap h6 默认大小 */
+      color: #212529;
+    }
+
+    /* 模拟 Modal 内部的 p */
+    .ql-editor p {
+      margin-top: 0;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    /* 工具栏背景 */
+    .ql-toolbar.ql-snow {
+      background-color: #f8f9fa !important;
+      border-color: #444 !important;
     }
   </style>
 </head>
@@ -103,13 +128,14 @@
     const quill = new Quill('#editor-container', {
       theme: 'snow',
       modules: {
-        toolbar: [
-          [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-          ['bold', 'italic', 'underline'],
-          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-          [{ 'color': [] }, { 'background': [] }],
-          ['clean']
-        ]
+        toolbar: {
+          container: [
+            [{ 'header': [6, false] }], 
+            ['bold', 'italic', 'underline'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            ['clean']
+          ]
+        }
       }
     });
 
