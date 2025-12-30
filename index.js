@@ -709,44 +709,32 @@ app.post('/withdraw', verifyToken, async (req, res) => {
   const lang = (req.headers['accept-language'] || 'en').substring(0, 2).toLowerCase();
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
 
-  if (!amount || isNaN(amount) || amount <= 0)
+  const posAmount = Math.abs(parseFloat(amount));
+
+  if (!posAmount || isNaN(posAmount) || posAmount <= 0)
     return res.status(200).json({ status: false, message: t('error.invalidAmount') });
 
   try {
-    // 获取用户资料（包含 balance 和 security_pin）
-    const userRes = await client.query(`
-      SELECT balance, security_pin FROM users 
-      WHERE id = $1 AND deleted_at IS NULL
-    `, [userId]);
-
-    if (!userRes.rows.length)
-      return res.status(200).json({ status: false, message: t('error.userNotFound') });
-
+    const userRes = await client.query('SELECT balance, security_pin FROM users WHERE id = $1', [userId]);
     const user = userRes.rows[0];
-    const balance = parseFloat(user.balance);
 
-    // 验证 PIN 是否匹配
-    if (user.security_pin !== pin)
+    if (!user || user.security_pin !== pin)
       return res.status(200).json({ status: false, message: t('error.incorrectPin') });
 
-    // 验证余额
-    if (balance < amount)
+    if (parseFloat(user.balance) < posAmount)
       return res.status(200).json({ status: false, message: t('error.insufficientBalance') });
 
-    // 保留最少 100 USD
-    if (balance - amount < 100)
+    if (parseFloat(user.balance) - posAmount < 100)
       return res.status(200).json({ status: false, message: t('error.minBalance') });
 
-    // 插入 transaction
     await client.query(`
-      INSERT INTO transactions (user_id, amount, type, status, remark)
-      VALUES ($1, $2, 'WITHDRAWAL', 'PENDING', $3)
-    `, [userId, -Math.abs(amount), ""]);
+      INSERT INTO transactions (user_id, amount, type, status, remark, created_at)
+      VALUES ($1, $2, 'WITHDRAWAL', 'PENDING', $3, NOW())
+    `, [userId, posAmount, ""]);
 
-    // 立即扣除余额
     await client.query(`
       UPDATE users SET balance = balance - $1 WHERE id = $2
-    `, [amount, userId]);
+    `, [posAmount, userId]);
 
     res.json({ status: true });
 
@@ -1793,7 +1781,7 @@ app.patch('/transactions/:id', verifyAdminToken, async (req, res) => {
   }
 
   try {
-    // 1. 更新交易状态并获取该笔交易信息
+    // 1. 更新交易状态并获取该笔交易信息 (amount 在数据库中现在是正数)
     const upd = await client.query(`
       UPDATE transactions
       SET status = $1
@@ -1807,16 +1795,16 @@ app.patch('/transactions/:id', verifyAdminToken, async (req, res) => {
 
     const { user_id, amount, type } = upd.rows[0];
     const txType = type.toUpperCase();
-    const absAmount = Math.abs(parseFloat(amount)); // 取绝对值，防止符号干扰
+    const posAmount = parseFloat(amount); // 绝对正数
 
     // 2. 状态变为 APPROVED (通过)
     if (newStat === 'APPROVED') {
       // 只有 DEPOSIT (充值) 和 COMMISSION (佣金) 在通过时需要给用户【加钱】
-      // WITHDRAWAL (提现) 不需要动余额，因为在 /withdraw 申请时已经【扣过钱】了
+      // WITHDRAWAL (提现) 不需要动余额，因为在用户申请(POST)时已经【扣过钱】了
       if (txType === 'DEPOSIT' || txType === 'COMMISSION') {
         await client.query(`
           UPDATE users SET balance = balance + $1 WHERE id = $2
-        `, [absAmount, user_id]);
+        `, [posAmount, user_id]);
       }
 
       // 3. 如果是 COMMISSION 类型，执行 Cycle (周期) 管理逻辑
@@ -1834,34 +1822,42 @@ app.patch('/transactions/:id', verifyAdminToken, async (req, res) => {
             UPDATE cycles SET status = FALSE, finished_at = NOW() WHERE id = $1
           `, [cycle_id]);
 
-          // B. 处理下线分佣 (0.25)
+          // B. 处理下线分佣 (固定每单 0.25 USDT)
           const ures = await client.query(`SELECT referred_by FROM users WHERE id = $1`, [user_id]);
           const referredBy = ures.rows[0] ? ures.rows[0].referred_by : null;
 
           if (referredBy) {
+            // 找到上级的 ID
             const refererRes = await client.query(
               `SELECT id FROM users WHERE username = $1`,
               [referredBy]
             );
             const referer = refererRes.rows[0];
+            
             if (referer) {
-              const refererShare = parseFloat((absAmount * 0.25).toFixed(2));
+              const refererShare = parseFloat((posAmount * 0.25).toFixed(2));
               if (refererShare > 0) {
                 const remark = `Downline: (ID:${user_id}) - #C_${cycle_id}`;
+                // 给上级生成一笔 APPROVED 的佣金记录
                 await client.query(`
                   INSERT INTO transactions (user_id, type, amount, status, remark, created_at)
                   VALUES ($1, 'COMMISSION', $2, 'APPROVED', $3, NOW())
                 `, [referer.id, refererShare, remark]);
+                // 同时给上级加钱
+                await client.query(`
+                  UPDATE users SET balance = balance + $1 WHERE id = $2
+                `, [refererShare, referer.id]);
               }
             }
           }
         }
 
-        // C. 开启新 Cycle (自动加载全局配置)
+        // C. 为该用户开启新的新 Cycle (自动加载全局配置)
         const configRes = await client.query(`
           SELECT key, value FROM config WHERE key IN ('cycle_size', 'blocker_indexes')
         `);
         const cfgMap = Object.fromEntries(configRes.rows.map(r => [r.key, r.value]));
+
         const newSize = parseInt(cfgMap['cycle_size'], 10) || 20;
         const blockerIndexes = (cfgMap['blocker_indexes'] || '')
           .split(',')
@@ -1876,11 +1872,11 @@ app.patch('/transactions/:id', verifyAdminToken, async (req, res) => {
     }
 
     // 4. 状态变为 REJECTED (拒绝)
-    // 只有提现被拒绝时，才需要执行退款 (把之前扣掉的钱加回来)
+    // 只有提现被拒绝时，才执行退款逻辑（把之前申请时扣掉的钱加回来）
     if (newStat === 'REJECTED' && txType === 'WITHDRAWAL') {
       await client.query(`
         UPDATE users SET balance = balance + $1 WHERE id = $2
-      `, [absAmount, user_id]);
+      `, [posAmount, user_id]);
     }
 
     res.json({ status: true, data: { id: txId, status: newStat } });
