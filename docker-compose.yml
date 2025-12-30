@@ -1,34 +1,37 @@
 version: '3.8'
-
 services:
-  # Node.js 应用
-  app:
-    build: .
-    restart: always
-    # 重点：把宿主机的 3001 端口映射到容器的 3000
-    # 这样 Caddy 才能通过 3001 找到它
-    ports:
-      - "127.0.0.1:3001:3000"
-      
-    environment:
-      # 数据库连接字符串 (注意数据库名是 myapp_a)
-      - DB=postgresql://postgres:MySecretPass123@db:5432/myapp_a
-      - TOKEN_KEY=SecretKeyForClientA
-      - TZ=Asia/Kuala_Lumpur
-      - PORT=3000
-    depends_on:
-      - db
-
-  # 数据库 (PostgreSQL)
-  db:
+  trade_me_db:
     image: postgres:15-alpine
+    container_name: trade_me_db
     restart: always
-    ports:
-      - "127.0.0.1:5433:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: MySecretPass123
-      POSTGRES_DB: myapp_a  # 独立的数据库名
+      POSTGRES_DB: myapp_a
+      TZ: Asia/Kuala_Lumpur
     volumes:
-      # 数据持久化，防止重启丢失
       - ./pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+    networks:
+      - trade_me_net
+
+  trade_me_app:
+    build: .
+    container_name: trade_me_app
+    restart: always
+    depends_on:
+      - trade_me_db
+    environment:
+      - PORT=3000
+      - TOKEN_KEY=SecretKeyForClientA
+      - TZ=Asia/Kuala_Lumpur
+      - DB=postgresql://postgres:MySecretPass123@trade_me_db:5432/myapp_a
+    networks:
+      - trade_me_net
+      - caddy_net
+
+networks:
+  trade_me_net:
+  caddy_net:
+    external: true
