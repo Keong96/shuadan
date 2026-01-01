@@ -187,7 +187,7 @@ app.post('/register', async (req, res) => {
   const { username, password, securityPin, phone, email, country, gender, dob, referralCode, lang } = req.body;
   const t = (key) => languages[lang]?.[key] || languages['en'][key] || key;
   
-  if (!username || !password || !securityPin)
+  if (!username || !password || !securityPin || !referralCode)
     return res.status(200).json({ status: false, message: t('error.missing_fields') });
 
   try {
@@ -201,13 +201,14 @@ app.post('/register', async (req, res) => {
 
     // 获取推荐人
     let referred_by = null;
-    if (referralCode) {
-      const ref = await client.query(
-        'SELECT id FROM users WHERE referral_code = $1 AND deleted_at IS NULL',
-        [referralCode]
-      );
-      if (ref.rowCount > 0) referred_by = ref.rows[0].id;
+    
+    const ref = await client.query('SELECT id FROM users WHERE referral_code = $1 AND deleted_at IS NULL', [referralCode]);
+    
+    if (ref.rowCount === 0) {
+      return res.status(200).json({ status: false, message: t('error.invalidReferralCode') });
     }
+    
+    referred_by = ref.rows[0].id;
 
     // 生成唯一推荐码
     let selfReferralCode;
