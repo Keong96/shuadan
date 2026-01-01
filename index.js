@@ -205,7 +205,7 @@ app.post('/register', async (req, res) => {
     const ref = await client.query('SELECT id FROM users WHERE referral_code = $1 AND deleted_at IS NULL', [referralCode]);
     
     if (ref.rowCount === 0) {
-      return res.status(200).json({ status: false, message: t('error.invalidReferralCode') });
+      return res.status(200).json({ status: false, message: t('error.register.invalidReferral') });
     }
     
     referred_by = ref.rows[0].id;
