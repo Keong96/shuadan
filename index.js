@@ -1007,7 +1007,7 @@ app.get('/users', verifyAdminToken, async (req, res) => {
         status, can_withdraw, can_do_task, user_type, vip_level, credit_score, last_login, created_at, is_demo, lucky_draw_setting, loan_limit,
         (SELECT sub.username FROM users sub WHERE sub.id = CAST(users.referred_by AS INTEGER) LIMIT 1) AS upline
       FROM users
-      WHERE user_type = 2 AND deleted_at IS NULL
+      WHERE user_type = 2 AND deleted_at IS NULL ORDER BY id DESC
     `;
     const params = [];
     if (hasSearch) {
