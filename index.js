@@ -1018,7 +1018,7 @@ app.get('/users', verifyAdminToken, async (req, res) => {
       usersQuery += ' AND (username ILIKE $1 OR phone ILIKE $1)';
       params.push(`%${search}%`);
     }
-    usersQuery += ` ORDER BY id ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    usersQuery += ` ORDER BY id DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limitNum, offset);
 
     const usersRes = await client.query(usersQuery, params);
