@@ -1007,14 +1007,14 @@ app.get('/users', verifyAdminToken, async (req, res) => {
         status, can_withdraw, can_do_task, user_type, vip_level, credit_score, last_login, created_at, is_demo, lucky_draw_setting, loan_limit,
         (SELECT sub.username FROM users sub WHERE sub.id = CAST(users.referred_by AS INTEGER) LIMIT 1) AS upline
       FROM users
-      WHERE user_type = 2 AND deleted_at IS NULL ORDER BY id DESC
+      WHERE user_type = 2 AND deleted_at IS NULL
     `;
     const params = [];
     if (hasSearch) {
       usersQuery += ' AND (username ILIKE $1 OR phone ILIKE $1)';
       params.push(`%${search}%`);
     }
-    usersQuery += ` ORDER BY id ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    usersQuery += ` ORDER BY id DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limitNum, offset);
 
     const usersRes = await client.query(usersQuery, params);
