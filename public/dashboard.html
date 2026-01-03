@@ -1624,7 +1624,7 @@
         })
         const amt     = parseFloat(o.amount).toFixed(2)
         const commAmt = parseFloat(o.commission).toFixed(2)
-        const pct     = parseFloat(commAmt / amt).toFixed(2)
+        const pct     = parseFloat((commAmt / amt) * 100).toFixed(2)
         const pending = o.status === 'PENDING'
 
         section.innerHTML += `
