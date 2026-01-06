@@ -1448,7 +1448,7 @@
       // 邀请码和抽奖券
       document.getElementById('inviteCode').innerText = user.referral_code || '-';
       document.getElementById('luckyDrawTicket').innerText = user.draw_ticket || '0';
-      document.getElementById('btnLuckyDraw').classList.toggle('d-none', tickets <= 0);
+      document.getElementById('btnLuckyDraw').classList.toggle('d-none', user.draw_ticket <= 0);
       
       // Withdraw Info Modal
       const withdrawInfoModal = document.getElementById('withdrawInfoModal');
