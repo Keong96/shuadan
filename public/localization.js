@@ -17,26 +17,38 @@ function loadLanguage(lang) {
 
 function applyTranslations() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n')
-    const value = translations[key];
-    if (value) {
-      if (key === "tnc.content") {
-        el.innerHTML = value; // keep tags
-      } else {
-        el.textContent = value; // plain text
+    try {
+      const key = el.getAttribute('data-i18n')
+      const value = translations[key];
+      if (value) {
+        if (key === "tnc.content") {
+          el.innerHTML = value;
+        } else {
+          el.textContent = value;
+        }
       }
+    } catch (e) {
+      console.error('i18n render error:', e, el)
     }
   })
 
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-    const key = el.getAttribute('data-i18n-placeholder');
-    if (translations[key]) el.placeholder = translations[key];
+    try {
+      const key = el.getAttribute('data-i18n-placeholder');
+      if (translations[key]) el.placeholder = translations[key];
+    } catch (e) {
+      console.error('i18n placeholder error:', e, el)
+    }
   });
 
   document.querySelectorAll('option[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n')
-    if (translations[key]) {
-      el.innerText = translations[key]
+    try {
+      const key = el.getAttribute('data-i18n')
+      if (translations[key]) {
+        el.innerText = translations[key]
+      }
+    } catch (e) {
+      console.error('i18n option error:', e, el)
     }
   })
 }
