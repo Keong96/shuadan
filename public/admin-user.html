@@ -112,6 +112,12 @@
       box-shadow: none !important;
       background-color: transparent; /* 可选，若你不想要背景 */
     }
+    .table td:nth-child(2) {
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -237,7 +243,7 @@
               <div class="col-sm-8">
                 <select id="editVipLevel" name="vip_level" class="form-control bg-dark text-white border-secondary">
                   <option value="BASIC">BASIC</option>
-                  <option value="ADVANCED">ADVANCED</option>
+                  <option value="ADVANCE">ADVANCE</option>
                   <option value="PRO">PRO</option>
                   <option value="ELITE">ELITE</option>
                   <option value="LEGEND">LEGEND</option>
